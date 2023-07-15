@@ -3,12 +3,14 @@ package com.sparta.communityback.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Getter
+@Setter
 @NoArgsConstructor
 @Table(name = "user")
 public class User {
@@ -17,7 +19,10 @@ public class User {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String username;
+    private String nickname; // 로그인 시
+
+    @Column(nullable = false)
+    private String username; // 사용자 이름
 
     @Column(nullable = false)
     private String password;
@@ -36,10 +41,18 @@ public class User {
     private  List<CommentLike> commentLikes = new ArrayList<>();
 
 
-    // service에서 중복확인, 비밀번호 암호화를 진행한뒤 값을 넣어줌
-    public User(String username, String password, UserRoleEnum role) {
+    public User(String username, String password, String nickname, UserRoleEnum role) {
         this.username = username;
         this.password = password;
+        this.nickname = nickname;
         this.role = role;
     }
+
+    public User(User user){
+        this.username = user.getUsername();
+        this.password = user.getPassword();
+        this.nickname = user.getNickname();
+        this.role = user.getRole();
+    }
+
 }

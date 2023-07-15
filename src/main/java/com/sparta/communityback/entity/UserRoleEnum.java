@@ -1,5 +1,8 @@
 package com.sparta.communityback.entity;
 
+import lombok.Getter;
+
+@Getter
 public enum UserRoleEnum {
     USER(Authority.USER),  // 사용자 권한
     ADMIN(Authority.ADMIN);  // 관리자 권한
