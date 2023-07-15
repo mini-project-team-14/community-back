@@ -32,7 +32,7 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
 
 
             UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
-                    requestDto.getNickname(),
+                    requestDto.getUsername(),
                     requestDto.getPassword()
             );
 
@@ -54,6 +54,7 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
         response.addHeader(JwtUtil.AUTHORIZATION_HEADER, token);
         response.setStatus(200);
 
+//        new ObjectMapper().writeValue(response.getOutputStream(), "로그인 성공");
         new ObjectMapper().writeValue(response.getOutputStream(), new ResultResponseDto("로그인 성공"));
     }
 
