@@ -6,8 +6,11 @@ import com.sparta.communityback.dto.StatusResponseDto;
 import com.sparta.communityback.entity.Post;
 import com.sparta.communityback.entity.PostLike;
 import com.sparta.communityback.entity.User;
+import com.sparta.communityback.jwt.JwtUtil;
 import com.sparta.communityback.repository.PostLikeRepository;
 import com.sparta.communityback.repository.PostRepository;
+import com.sparta.communityback.repository.UserRepository;
+import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -20,17 +23,12 @@ import java.util.List;
 public class PostService {
 
     private final PostRepository postRepository;
+    private final UserRepository userRepository;
     private final PostLikeRepository postLikeRepository;
+    private final JwtUtil jwtUtil;
 
-    public PostResponseDto createPost(PostRequestDto requestDto, User user) {
-        Post post = new Post(requestDto, user);
-        // DB 저장 넘겨주기
-        Post savePost = postRepository.save(post);
-        // Entity -> ResponseDto
-        return new PostResponseDto(savePost);
-    }
-
-    public List<PostResponseDto> getAllPosts() {
+    //<전체 조회하기>
+    public List<PostResponseDto> findAll() {
         // db 조회 넘겨주기
         return postRepository.findAllByOrderByCreatedAtDesc()
                 .stream()
@@ -38,13 +36,32 @@ public class PostService {
                 .toList();
     }
 
+    //<게시글 작성하기>
+    public PostResponseDto createPost(PostRequestDto requestDto, String token) {
+        String username = getUsername(token);
+        Post post = new Post(requestDto, username);
+        User user = userRepository.findByUsername(username).orElseThrow(()->
+                new IllegalArgumentException("해당 유저는 존재하지 않습니다"));
+        post.connectUser(user);
+        Post savePost = postRepository.save(post);
+        return new PostResponseDto(savePost);
+    }
+
+    //payload에 들어갈 정보들이 claim
+    private String getUsername(String token) {
+        Claims info = jwtUtil.getUserInfoFromToken(token);
+        String username = info.getSubject();
+        return username;
+    }
+
+    //<상세 조회하기>
     public PostResponseDto getSelectedPost(Long id) {
         // 해당 메모가 DB에 존재하는지 확인
         Post post = findPost(id);
         // Entity -> ResponseDto
         return new PostResponseDto(post);
     }
-
+    //<게시글 수정하기>
     @Transactional
     public PostResponseDto updatePost(Long id, PostRequestDto requestDto, User user) {
         // 해당 메모가 DB에 존재하는지 확인
@@ -57,7 +74,7 @@ public class PostService {
         return new PostResponseDto(post);
     }
 
-    // 수정, 삭제시 권한을 확인 (현재 오버로딩으로 처리중이나 내부 로직이 거의 동일하여 합치는게 좋은가 고민중)
+    //<삭제하기>
     public StatusResponseDto deletePost(Long id, User user) {
         // 해당 메모가 DB에 존재하는지 확인
         Post post = findPost(id);

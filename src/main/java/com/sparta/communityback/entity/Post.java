@@ -40,6 +40,10 @@ public class Post extends Timestamped{
         this.title = requestDto.getTitle();
         this.content = requestDto.getContent();
     }
+
+    public void connectUser(User user) {
+        this.user=user;
+    }
     public void addLike(PostLike postlike) {
         this.postLikes.add(postlike);
 
