@@ -33,8 +33,8 @@ public class UserService {
         String password = passwordEncoder.encode(requestDto.getPassword());
         String nickname = requestDto.getNickname();
         // 회원 중복 확인
-        Optional<User> checkNickname = userRepository.findByNickname(nickname);
-        if (checkNickname.isPresent()) {
+        Optional<User> checkUsername = userRepository.findByUsername(username);
+        if (checkUsername.isPresent()) {
             throw new IllegalArgumentException("중복된 사용자가 존재합니다.");
         }
         // 사용자 ROLE 확인

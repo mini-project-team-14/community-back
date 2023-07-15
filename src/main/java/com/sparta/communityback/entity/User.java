@@ -18,10 +18,10 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String nickname; // 로그인 시
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String username; // 사용자 이름
 
     @Column(nullable = false)
