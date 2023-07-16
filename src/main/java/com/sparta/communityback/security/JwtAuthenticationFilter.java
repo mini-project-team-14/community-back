@@ -47,15 +47,23 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
 
     @Override
     protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException {
-        String username = ((UserDetailsImpl) authResult.getPrincipal()).getUsername();
-        UserRoleEnum role = ((UserDetailsImpl) authResult.getPrincipal()).getUser().getRole();
 
-        String token = jwtUtil.createToken(username, role);
-        response.addHeader(JwtUtil.AUTHORIZATION_HEADER, token);
-        response.setStatus(200);
+        String headerToken = request.getHeader(JwtUtil.AUTHORIZATION_HEADER); // 헤더에서 토큰을 가져옴
 
+        if (headerToken == null) {
+            String username = ((UserDetailsImpl) authResult.getPrincipal()).getUsername();
+            UserRoleEnum role = ((UserDetailsImpl) authResult.getPrincipal()).getUser().getRole();
+
+            String token = jwtUtil.createToken(username, role);
+            response.addHeader(JwtUtil.AUTHORIZATION_HEADER, token);
+
+            response.setStatus(200);
 //        new ObjectMapper().writeValue(response.getOutputStream(), "로그인 성공");
-        new ObjectMapper().writeValue(response.getOutputStream(), new ResultResponseDto("로그인 성공"));
+            new ObjectMapper().writeValue(response.getOutputStream(), new ResultResponseDto("로그인 성공"));
+        } else {
+            response.setStatus(200);
+            new ObjectMapper().writeValue(response.getOutputStream(), new ResultResponseDto("로그인 상태입니다."));
+        }
     }
 
     @Override
