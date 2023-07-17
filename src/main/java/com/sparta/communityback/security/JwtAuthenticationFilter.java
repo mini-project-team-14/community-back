@@ -13,9 +13,11 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 import java.io.IOException;
 
+//@CrossOrigin(originPatterns = "http://localhost:3000")
 @Slf4j(topic = "로그인 및 JWT 생성")
 public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
     private final JwtUtil jwtUtil;
@@ -41,7 +43,8 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
             return getAuthenticationManager().authenticate(usernamePasswordAuthenticationToken);
         } catch (IOException e) {
             log.error(e.getMessage());
-            throw new RuntimeException(e.getMessage());
+            throw new AuthenticationException(e.getMessage()) {
+            };
         }
     }
 
@@ -56,19 +59,39 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
 
             String token = jwtUtil.createToken(username, role);
             response.addHeader(JwtUtil.AUTHORIZATION_HEADER, token);
+//            response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
+//            response.setHeader("Access-Control-Allow-Origin", "http://13.125.15.196:8080/");
+//            response.setHeader("Access-Control-Allow-Methods", "POST");
+//            response.setHeader("Access-Control-Allow-Methods", "GET");
+//            response.setHeader("Access-Control-Allow-Methods", "OPTIONS");
+//            response.setHeader("Access-Control-Allow-Methods", "PUT");
+//            response.setHeader("Access-Control-Allow-Methods", "DELETE");
+//            response.setHeader("Access-Control-Max-Age", "3600");
+//            response.setHeader("Access-Control-Allow-Headers", "x-requested-with, origin, content-type, accept");
 
             response.setStatus(200);
+            response.setContentType("application/json;charset=UTF-8");
+            response.setCharacterEncoding("UTF-8");
 //        new ObjectMapper().writeValue(response.getOutputStream(), "로그인 성공");
+
             new ObjectMapper().writeValue(response.getOutputStream(), new ResultResponseDto("로그인 성공"));
+//            String json = new ObjectMapper().writeValueAsString(new ResultResponseDto("로그인 성공"));
+//            response.getWriter().write(json);
         } else {
             response.setStatus(200);
             new ObjectMapper().writeValue(response.getOutputStream(), new ResultResponseDto("로그인 상태입니다."));
+//            String json = new ObjectMapper().writeValueAsString(new ResultResponseDto("로그인 상태입니다."));
+//            response.getWriter().write(json);
         }
     }
 
     @Override
     protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, AuthenticationException failed) throws IOException {
         response.setStatus(400);
+        response.setContentType("application/json;charset=UTF-8");
+        response.setCharacterEncoding("UTF-8");
+//        String json = new ObjectMapper().writeValueAsString(new ResultResponseDto("로그인 실패"));
+//        response.getWriter().write(json);
         new ObjectMapper().writeValue(response.getOutputStream(), new ResultResponseDto("로그인 실패"));
     }
 

@@ -37,15 +37,15 @@ public class PostService {
     }
 
     //<게시글 작성하기>
-    public PostResponseDto createPost(PostRequestDto requestDto, String token) {
-        String username = getUsername(token);
-        Post post = new Post(requestDto, username);
-        User user = userRepository.findByUsername(username).orElseThrow(()->
-                new IllegalArgumentException("해당 유저는 존재하지 않습니다"));
-        post.connectUser(user);
-        Post savePost = postRepository.save(post);
-        return new PostResponseDto(savePost);
-    }
+//    public PostResponseDto createPost(PostRequestDto requestDto, String token) {
+//        String username = getUsername(token);
+//        Post post = new Post(requestDto, username);
+//        User user = userRepository.findByUsername(username).orElseThrow(()->
+//                new IllegalArgumentException("해당 유저는 존재하지 않습니다"));
+//        post.connectUser(user);
+//        Post savePost = postRepository.save(post);
+//        return new PostResponseDto(savePost);
+//    }
 
     //payload에 들어갈 정보들이 claim
     private String getUsername(String token) {
