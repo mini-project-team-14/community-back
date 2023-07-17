@@ -4,6 +4,7 @@ import com.sparta.communityback.dto.PostRequestDto;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,15 +24,34 @@ public class Post extends Timestamped{
 
     @ManyToOne(fetch = FetchType.LAZY)
     private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Board board;
+
     // post 삭제시 comment가 같이 삭제되도록 cascade 추가
     @OrderBy("createdAt desc")
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Comment> comments = new ArrayList<>();
+
+    @ColumnDefault("0")
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<PostLike> postLikes = new ArrayList<>();
 
-    public Post(PostRequestDto requestDto, User user) {
+    public int getLikeCount(){
+        return postLikes.size();
+    }
+    public void addLike(PostLike postlike) {
+        this.postLikes.add(postlike);
+    }
+    public void decreasedLikeCount(){
+        if(!postLikes.isEmpty()){
+            postLikes.remove(postLikes.size()-1);
+        }
+    }
+
+    public Post(PostRequestDto requestDto, Board board, User user) {
         this.title = requestDto.getTitle();
+        this.board = board;
         this.user = user;
         this.content = requestDto.getContent();
     }
@@ -44,10 +64,7 @@ public class Post extends Timestamped{
     public void connectUser(User user) {
         this.user=user;
     }
-    public void addLike(PostLike postlike) {
-        this.postLikes.add(postlike);
 
-    }
     public void removeLike(PostLike postlike){
         this.postLikes.remove(postlike);
     }

@@ -8,6 +8,7 @@ import com.sparta.communityback.entity.UserRoleEnum;
 import com.sparta.communityback.jwt.JwtUtil;
 import com.sparta.communityback.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +25,8 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
-    private final String ADMIN_TOKEN = "AAABnvxRVklrnYxKZ0aHgTBcXukeZygoC ";
+    @Value("${adimin.token}") // Base64 Encode 한 SecretKey
+    private String ADMIN_TOKEN;
 
 
     @Transactional

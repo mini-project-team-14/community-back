@@ -8,17 +8,23 @@ import lombok.Setter;
 @Entity
 @Getter
 @Setter
-@Table(name = "board_like")
+@Table(name = "board_like") // 수정 필요
 @NoArgsConstructor
 public class PostLike {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @ManyToOne(fetch = FetchType.LAZY)
-    private User user;
-    @ManyToOne(fetch = FetchType.LAZY)
-    private Post post;
 
+    @Column(name = "likeCount", nullable = false)
+    private String likeCount;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user")
+    private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "post")
+    private Post post;
 
     public PostLike(User user, Post post) {
         this.user = user;
