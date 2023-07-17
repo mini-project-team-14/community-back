@@ -2,18 +2,19 @@ package com.sparta.communityback.controller;
 
 import com.sparta.communityback.dto.PostRequestDto;
 import com.sparta.communityback.dto.PostResponseDto;
+import com.sparta.communityback.dto.StatusResponseDto;
 import com.sparta.communityback.entity.Post;
 import com.sparta.communityback.jwt.JwtUtil;
 import com.sparta.communityback.service.PostService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("//api/boards/{boardId}")
 @RequiredArgsConstructor
 public class PostController {
 
@@ -21,10 +22,11 @@ public class PostController {
     private final JwtUtil jwtUtil;
 
     //<전체 조회하기>
-    @GetMapping("/posts")
-    public List<PostResponseDto> getPosts(){
+    @GetMapping()
+    public List<PostResponseDto> getPosts() {
         return postService.findAll();
     }
+
     //<게시글 작성하기>
     @PostMapping("/posts")
     public PostResponseDto createPost(@RequestBody PostRequestDto postRequestDto, HttpServletRequest req)
@@ -33,31 +35,62 @@ public class PostController {
         return postService.createPost(postRequestDto, token);
     }
     private String authentication(HttpServletRequest req) {
-        String tokenValue = jwtUtil.getTokenFromRequest(req);
-        String token = jwtUtil.substringToken(tokenValue);
-
+        String token = jwtUtil.getJwtFromHeader(req);
         if(!jwtUtil.validateToken(token)){
             throw new IllegalArgumentException("Token Error");
         }
         return token;
     }
-    //<상세 조회하기>
-    @GetMapping("/post/{id}")
-    public Optional<Post> getPost(@PathVariable("id") Long id ){
-        return postService.getPostById(id);
+
+    // <게시글 좋아요 추가 >
+    @PostMapping("/{postId}/like")
+    public ResponseEntity<Void> addLike(@PathVariable("postId") Long postId) {
+        postService.addLikeToPost(postId);
+        return ResponseEntity.ok().build();
     }
-    //<업데이트하기>
-    @PutMapping("/post/{id}")
-    public PostResponseDto updatePost(@PathVariable("id") Long id, @RequestBody PostRequestDto postrequestDto, HttpServletRequest req){
+
+    // <게시글 좋아요 취소 >
+    @DeleteMapping("/{postId}/like")
+    public ResponseEntity<Void> removeLike(@PathVariable("postId") Long postId) {
+        postService.removeLikeFromPost(postId);
+        return ResponseEntity.ok().build();
+    }
+
+    //<상세 조회하기>
+    @GetMapping("/posts/{postId}")
+    public PostResponseDto getPost(@PathVariable("id") Long id ){
+        return postService.getSelectedPost(id);
+    }
+
+    //<게시글 수정하기>
+    @PutMapping("/posts/{postId}")
+    public PostResponseDto updatePost(@PathVariable("id") Long id, @RequestBody PostRequestDto requestDto, HttpServletRequest req){
         String token = authentication(req);
-        return postService.updatePost(id, postrequestDto, token);
+        return postService.updatePost(id, requestDto, token);
 
     }
     //<삭제하기>
-    @DeleteMapping("/post/{id}")
-    public String deletePost(@PathVariable("id") Long id, @RequestBody PostRequestDto postRequestDto, HttpServletRequest req){
+    @DeleteMapping("/posts/{postId}")
+    public StatusResponseDto deletePost(@PathVariable("id") Long id, HttpServletRequest req){
         String token = authentication(req);
-        return postService.deletePost(id, postRequestDto, token);
+        return postService.deletePost(id, token);
     }
 
 }
+
+//    // @CookieValue 가 아니라 헤더로 받아올 것
+//    @PostMapping("/posts")
+//    public PostResponseDto createPost(@RequestHeader(JwtUtil.AUTHORIZATION_HEADER) String tokenValue, @RequestBody PostRequestDto requestDto) {
+//        return postService.createPost(tokenValue, requestDto);
+//    }
+//
+//    @PutMapping("/posts/{id}")
+//    public PostResponseDto updatePost(@RequestHeader(JwtUtil.AUTHORIZATION_HEADER) String tokenValue, @PathVariable Long id, @RequestBody PostRequestDto requestDto) {
+//        return postService.updatePost(tokenValue, id, requestDto);
+//    }
+//
+//    @DeleteMapping("/posts/{id}")
+//    public ResponseEntity<MessageResponseDto> deletePost(@RequestHeader(JwtUtil.AUTHORIZATION_HEADER) String tokenValue, @PathVariable Long id) {
+//        return postService.deletePost(tokenValue, id);
+//    }
+//}

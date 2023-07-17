@@ -5,6 +5,8 @@ import lombok.Getter;
 
 @Getter
 public class PostRequestDto {
+//    @NotBlank
+//    private String board;
     @NotBlank
     private String title;
     @NotBlank
