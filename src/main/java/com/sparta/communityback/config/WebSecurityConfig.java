@@ -32,6 +32,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebSecurityConfig implements WebMvcConfigurer {
 
     private final JwtUtil jwtUtil;
+    private final CorsConfig corsConfig;
     private final UserDetailsServiceImpl userDetailsService;
     private final AuthenticationConfiguration authenticationConfiguration;
     private final static String LOGIN_URL = "/api/user/login";
@@ -115,6 +116,8 @@ public class WebSecurityConfig implements WebMvcConfigurer {
                 formLogin
                         .loginPage(LOGIN_URL).permitAll()
         );
+        // corsConfig setting
+        http.addFilterBefore(corsConfig.corsFilter(), JwtAuthenticationFilter.class); // SPRING 3.0
 
         // 필터 관리
 
