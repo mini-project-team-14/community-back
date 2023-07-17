@@ -51,14 +51,19 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
     @Override
     protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException {
 
-        String headerToken = request.getHeader(JwtUtil.AUTHORIZATION_HEADER); // 헤더에서 토큰을 가져옴
+        String tokenValue = jwtUtil.getTokenFromRequest(request);
 
-        if (headerToken == null) {
+//        String headerToken = request.getHeader(JwtUtil.AUTHORIZATION_HEADER); // 헤더에서 토큰을 가져옴
+
+        if (tokenValue == null) {
             String username = ((UserDetailsImpl) authResult.getPrincipal()).getUsername();
             UserRoleEnum role = ((UserDetailsImpl) authResult.getPrincipal()).getUser().getRole();
 
             String token = jwtUtil.createToken(username, role);
-            response.addHeader(JwtUtil.AUTHORIZATION_HEADER, token);
+            // Jwt 쿠키 저장
+            jwtUtil.addJwtToCookie(token, response);
+            // JWT header 저장
+//            response.addHeader(JwtUtil.AUTHORIZATION_HEADER, token);
 //            response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
 //            response.setHeader("Access-Control-Allow-Origin", "http://13.125.15.196:8080/");
 //            response.setHeader("Access-Control-Allow-Methods", "POST");
@@ -71,7 +76,7 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
 
             response.setStatus(200);
             response.setContentType("application/json;charset=UTF-8");
-            response.setCharacterEncoding("UTF-8");
+//            response.setCharacterEncoding("UTF-8");
 //        new ObjectMapper().writeValue(response.getOutputStream(), "로그인 성공");
 
             new ObjectMapper().writeValue(response.getOutputStream(), new ResultResponseDto("로그인 성공"));
@@ -89,7 +94,7 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
     protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, AuthenticationException failed) throws IOException {
         response.setStatus(400);
         response.setContentType("application/json;charset=UTF-8");
-        response.setCharacterEncoding("UTF-8");
+//        response.setCharacterEncoding("UTF-8");
 //        String json = new ObjectMapper().writeValueAsString(new ResultResponseDto("로그인 실패"));
 //        response.getWriter().write(json);
         new ObjectMapper().writeValue(response.getOutputStream(), new ResultResponseDto("로그인 실패"));
