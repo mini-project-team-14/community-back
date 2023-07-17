@@ -8,10 +8,10 @@ import com.sparta.communityback.jwt.JwtUtil;
 import com.sparta.communityback.service.PostService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("//api/boards/{boardId}")
@@ -35,19 +35,33 @@ public class PostController {
         return postService.createPost(postRequestDto, token);
     }
     private String authentication(HttpServletRequest req) {
-//        String tokenValue = jwtUtil.getTokenFromRequest(req);
         String token = jwtUtil.getJwtFromHeader(req);
-
         if(!jwtUtil.validateToken(token)){
             throw new IllegalArgumentException("Token Error");
         }
         return token;
     }
+
+    // <게시글 좋아요 추가 >
+    @PostMapping("/{postId}/like")
+    public ResponseEntity<Void> addLike(@PathVariable("postId") Long postId) {
+        postService.addLikeToPost(postId);
+        return ResponseEntity.ok().build();
+    }
+
+    // <게시글 좋아요 취소 >
+    @DeleteMapping("/{postId}/like")
+    public ResponseEntity<Void> removeLike(@PathVariable("postId") Long postId) {
+        postService.removeLikeFromPost(postId);
+        return ResponseEntity.ok().build();
+    }
+
     //<상세 조회하기>
     @GetMapping("/posts/{postId}")
     public PostResponseDto getPost(@PathVariable("id") Long id ){
         return postService.getSelectedPost(id);
     }
+
     //<게시글 수정하기>
     @PutMapping("/posts/{postId}")
     public PostResponseDto updatePost(@PathVariable("id") Long id, @RequestBody PostRequestDto requestDto, HttpServletRequest req){
@@ -57,9 +71,9 @@ public class PostController {
     }
     //<삭제하기>
     @DeleteMapping("/posts/{postId}")
-    public StatusResponseDto deletePost(@PathVariable("id") Long id, @RequestBody PostRequestDto requestDto, HttpServletRequest req){
+    public StatusResponseDto deletePost(@PathVariable("id") Long id, HttpServletRequest req){
         String token = authentication(req);
-        return postService.deletePost(id, requestDto, token);
+        return postService.deletePost(id, token);
     }
 
 }
