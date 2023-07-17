@@ -46,7 +46,7 @@ public class CommentController {
         return new ResponseEntity<>(commentService.deleteComment(commentId, user), HttpStatus.OK);
     }
 
-    @PostMapping("/like")
+    @PostMapping("/{commentId}/like")
     public ResponseEntity<StatusResponseDto> commentLike(@PathVariable Long commentId,
                                                               @AuthenticationPrincipal UserDetailsImpl userDetails) {
         User user = userDetails.getUser();
