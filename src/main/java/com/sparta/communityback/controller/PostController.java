@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("//api/boards/{boardId}")
 @RequiredArgsConstructor
 public class PostController {
 
@@ -22,7 +22,7 @@ public class PostController {
     private final JwtUtil jwtUtil;
 
     //<전체 조회하기>
-    @GetMapping("/posts")
+    @GetMapping()
     public List<PostResponseDto> getPosts() {
         return postService.findAll();
     }
@@ -44,19 +44,19 @@ public class PostController {
         return token;
     }
     //<상세 조회하기>
-    @GetMapping("/post/{id}")
+    @GetMapping("/posts/{postId}")
     public PostResponseDto getPost(@PathVariable("id") Long id ){
         return postService.getSelectedPost(id);
     }
     //<게시글 수정하기>
-    @PutMapping("/post/{id}")
+    @PutMapping("/posts/{postId}")
     public PostResponseDto updatePost(@PathVariable("id") Long id, @RequestBody PostRequestDto requestDto, HttpServletRequest req){
         String token = authentication(req);
         return postService.updatePost(id, requestDto, token);
 
     }
     //<삭제하기>
-    @DeleteMapping("/post/{id}")
+    @DeleteMapping("/posts/{postId}")
     public StatusResponseDto deletePost(@PathVariable("id") Long id, @RequestBody PostRequestDto requestDto, HttpServletRequest req){
         String token = authentication(req);
         return postService.deletePost(id, requestDto, token);
