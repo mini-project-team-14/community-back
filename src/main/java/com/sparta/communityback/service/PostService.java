@@ -39,9 +39,9 @@ public class PostService {
     //<게시글 작성하기>
     public PostResponseDto createPost(PostRequestDto requestDto, String token) {
         String username = getUsername(token);
-        Post post = new Post(requestDto, username);
         User user = userRepository.findByUsername(username).orElseThrow(()->
                 new IllegalArgumentException("해당 유저는 존재하지 않습니다"));
+        Post post = new Post(requestDto, user);
         post.connectUser(user);
         Post savePost = postRepository.save(post);
         return new PostResponseDto(savePost);
@@ -63,9 +63,12 @@ public class PostService {
     }
     //<게시글 수정하기>
     @Transactional
-    public PostResponseDto updatePost(Long id, PostRequestDto requestDto, User user) {
+    public PostResponseDto updatePost(Long id, PostRequestDto requestDto, String token) {
         // 해당 메모가 DB에 존재하는지 확인
         Post post = findPost(id);
+        String username = getUsername(token);
+        User user = userRepository.findByUsername(username).orElseThrow(()->
+                new IllegalArgumentException("해당 유저는 존재하지 않습니다"));
         // 권한 확인
         checkAuthority(post, user);
         // 수정
@@ -75,9 +78,12 @@ public class PostService {
     }
 
     //<삭제하기>
-    public StatusResponseDto deletePost(Long id, User user) {
+    public StatusResponseDto deletePost(Long id, PostRequestDto requestDto, String token) {
         // 해당 메모가 DB에 존재하는지 확인
         Post post = findPost(id);
+        String username = getUsername(token);
+        User user = userRepository.findByUsername(username).orElseThrow(()->
+                new IllegalArgumentException("해당 유저는 존재하지 않습니다"));
         // 권한 확인
         checkAuthority(post, user);
         // 삭제
