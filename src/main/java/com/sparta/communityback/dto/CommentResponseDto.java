@@ -10,7 +10,7 @@ import java.util.List;
 
 @Getter
 public class CommentResponseDto {
-    private Long id;
+    private Long commentId;
     private String comment;
     private String nickname;
     private LocalDateTime createdAt;
@@ -18,7 +18,7 @@ public class CommentResponseDto {
     private List<String> LikesList; // 형태 바꿔서 줄 생각
 
     public CommentResponseDto(Comment comment) {
-        this.id = comment.getId();
+        this.commentId = comment.getCommentId();
         this.comment = comment.getComment();
         this.nickname = comment.getUser().getNickname();
         this.createdAt = comment.getCreatedAt();

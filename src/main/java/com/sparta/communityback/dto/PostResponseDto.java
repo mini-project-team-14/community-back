@@ -10,30 +10,32 @@ import java.util.List;
 
 @Getter
 public class PostResponseDto {
-    private Long id;
+    private Long postId;
     private String title;
     private String nickname;
     private String content;
     private LocalDateTime createdAt;
     private LocalDateTime modifiedAt;
-    private List<CommentResponseDto> comments;
     private List<String> LikesList;
+    private List<CommentResponseDto> comments;
+
 
     public PostResponseDto(Post post) {
-        this.id = post.getId();
+        this.postId = post.getPostId();
         this.title = post.getTitle();
         this.nickname = post.getUser().getNickname();
         this.content = post.getContent();
         this.createdAt = post.getCreatedAt();
         this.modifiedAt = post.getModifiedAt();
-        this.comments = post.getComments()
-                .stream()
-                .map(CommentResponseDto::new)
-                .toList();
         this.LikesList = post.getPostLikes()
                 .stream()
                 .map(PostLike::getUser)
                 .map(User::getNickname)
                 .toList();
+        this.comments = post.getComments()
+                .stream()
+                .map(CommentResponseDto::new)
+                .toList();
+
     }
 }

@@ -13,10 +13,10 @@ import java.util.List;
 @Getter
 @Table(name = "post")
 @NoArgsConstructor
-public class Post extends Timestamped{
+public class Post extends Timestamped {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long postId;
     @Column(name = "title", nullable = false)
     private String title;
     @Column(name = "content", nullable = false, length = 10000)
@@ -33,21 +33,8 @@ public class Post extends Timestamped{
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Comment> comments = new ArrayList<>();
 
-    @ColumnDefault("0")
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<PostLike> postLikes = new ArrayList<>();
-
-    public int getLikeCount(){
-        return postLikes.size();
-    }
-    public void addLike(PostLike postlike) {
-        this.postLikes.add(postlike);
-    }
-    public void decreasedLikeCount(){
-        if(!postLikes.isEmpty()){
-            postLikes.remove(postLikes.size()-1);
-        }
-    }
 
     public Post(PostRequestDto requestDto, Board board, User user) {
         this.title = requestDto.getTitle();
@@ -62,10 +49,7 @@ public class Post extends Timestamped{
     }
 
     public void connectUser(User user) {
-        this.user=user;
-    }
-
-    public void removeLike(PostLike postlike){
-        this.postLikes.remove(postlike);
+        this.user = user;
     }
 }
+

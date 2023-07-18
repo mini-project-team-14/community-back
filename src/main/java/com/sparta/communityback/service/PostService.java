@@ -29,74 +29,40 @@ public class PostService {
     private final UserRepository userRepository;
     private final BoardReqpository boardReqpository;
     private final PostLikeRepository postLikeRepository;
+    private final BoardService boardService;
     private final JwtUtil jwtUtil;
 
     //<전체 조회하기>
     public List<PostResponseDto> findAll(Long boardId) {
-        Board board = boardReqpository.findById(boardId).orElseThrow(() ->
-                new NullPointerException("해당 게시판은 존재하지 않습니다"));
+        Board board = boardService.findBoard(boardId);
         // db 조회 넘겨주기
         return postRepository.findByBoardOrderByCreatedAtDesc(board)
                 .stream()
-
                 .map(PostResponseDto::new)
                 .toList();
     }
 
     //<게시글 작성하기>
-    public PostResponseDto createPost(PostRequestDto requestDto, Long boardId, String token) {
-        Board board = boardReqpository.findById(boardId).orElseThrow(() ->
-                new NullPointerException("해당 게시판은 존재하지 않습니다")
-        );
-        String username = getUsername(token);
-        User user = userRepository.findByUsername(username).orElseThrow(()->
-                new NullPointerException("해당 유저는 존재하지 않습니다"));
+    public PostResponseDto createPost(PostRequestDto requestDto, Long boardId, User user) {
+        Board board = boardService.findBoard(boardId);
         Post post = new Post(requestDto, board, user);
 //        post.connectUser(user);
         Post savePost = postRepository.save(post);
         return new PostResponseDto(savePost);
     }
 
-    //<게시글 좋아요 추가>
-    public void addLikeToPost(Long postId) {
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new NullPointerException("게시글을 찾을 수 없습니다."));
-        if (!post.getPostLikes().isEmpty()) {
-            throw new IllegalStateException("이미 좋아요를 눌렀습니다.");
-        }
-        post.addLike(new PostLike());
-        postRepository.save(post);
-    }
-    //<게시글 좋아요 취소>
-    public void removeLikeFromPost(Long postId) {
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("이미 좋아요를 취소했습니다"));
-        post.decreasedLikeCount();
-        postRepository.save(post);
-    }
-
-    //payload에 들어갈 정보들이 claim
-    private String getUsername(String token) {
-        Claims info = jwtUtil.getUserInfoFromToken(token);
-        String username = info.getSubject();
-        return username;
-    }
-
     //<상세 조회하기>
     public PostResponseDto getSelectedPost(Long id) {
-        // 해당 메모가 DB에 존재하는지 확인
+        // 해당 게시글이 DB에 존재하는지 확인
         Post post = findPost(id);
         // Entity -> ResponseDto
         return new PostResponseDto(post);
     }
     //<게시글 수정하기>
     @Transactional
-    public PostResponseDto updatePost(Long id, PostRequestDto requestDto, String token) {
+    public PostResponseDto updatePost(Long id, PostRequestDto requestDto, User user) {
         // 해당 메모가 DB에 존재하는지 확인
         Post post = findPost(id);
-        String username = getUsername(token);
-        User user = userRepository.findByUsername(username).orElseThrow(()->
-                new NullPointerException("해당 유저는 존재하지 않습니다"));
         // 권한 확인
         checkAuthority(post, user);
         // 수정
@@ -106,12 +72,9 @@ public class PostService {
     }
 
     //<삭제하기>
-    public StatusResponseDto deletePost(Long id, String token) {
+    public StatusResponseDto deletePost(Long id, User user) {
         // 해당 메모가 DB에 존재하는지 확인
         Post post = findPost(id);
-        String username = getUsername(token);
-        User user = userRepository.findByUsername(username).orElseThrow(()->
-                new NullPointerException("해당 유저는 존재하지 않습니다"));
         // 권한 확인
         checkAuthority(post, user);
         // 삭제
@@ -119,6 +82,20 @@ public class PostService {
 
         return new StatusResponseDto(HttpStatus.OK.value(), "삭제가 완료 되었습니다.");
 
+    }
+
+    //<게시글 좋아요 추가>
+    public StatusResponseDto postLike(Long postId, User user) {
+        Post post = findPost(postId);
+        PostLike checkPostLike = postLikeRepository.findByPostAndUser(post, user).orElse(null);
+        if (checkPostLike == null) {
+            PostLike postLike = new PostLike(user, post);
+            postLikeRepository.save(postLike);
+            return new StatusResponseDto(HttpStatus.CREATED.value(), "좋아요 성공");
+        } else {
+            postLikeRepository.delete(checkPostLike);
+            return new StatusResponseDto(HttpStatus.OK.value(), "좋아요 취소");
+        }
     }
 
     protected Post findPost(Long id) {
@@ -132,7 +109,7 @@ public class PostService {
         if (!user.getRole().getAuthority().equals("ROLE_ADMIN")) {
             // username만 확인하는 것 보다 이쪽이 더 안전하다고 생각하여 작성하였으나 true가 나오지 않음.
 //            if (!post.getUser().equals(user)) {
-            if (post.getUser().getId() != user.getId()) {
+            if (post.getUser().getUserId() != user.getUserId()) {
                 throw new AuthorizationServiceException("작성자만 삭제/수정할 수 있습니다.");
             }
         }

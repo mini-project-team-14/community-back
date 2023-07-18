@@ -84,7 +84,7 @@ public class CommentService {
         // admin 확인
         if(!user.getRole().getAuthority().equals("ROLE_ADMIN")){
             // 작성자 본인 확인
-            if (!comment.getUser().getId().equals(user.getId())) {
+            if (!comment.getUser().getUserId().equals(user.getUserId())) {
                 throw new AuthorizationServiceException("작성자만 삭제/수정할 수 있습니다.");
             }
         }
