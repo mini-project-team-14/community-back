@@ -6,6 +6,7 @@ import com.sparta.communityback.dto.StatusResponseDto;
 import com.sparta.communityback.entity.User;
 import com.sparta.communityback.security.UserDetailsImpl;
 import com.sparta.communityback.service.CommentService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -24,7 +25,7 @@ public class CommentController {
 
     @PostMapping()
     public ResponseEntity<CommentResponseDto> createComment(@PathVariable Long postId,
-                                                           @RequestBody CommentRequestDto requestDto,
+                                                           @RequestBody @Valid CommentRequestDto requestDto,
                                                            // 아직 없음
                                                            @AuthenticationPrincipal UserDetailsImpl userDetails) {
         User user = userDetails.getUser();
@@ -33,7 +34,7 @@ public class CommentController {
 
     @PutMapping("{commentId}")
     public ResponseEntity<CommentResponseDto> updateComment(@PathVariable Long commentId,
-                                                            @RequestBody CommentRequestDto requestDto,
+                                                            @RequestBody @Valid CommentRequestDto requestDto,
                                                             @AuthenticationPrincipal UserDetailsImpl userDetails){
         User user = userDetails.getUser();
         return new ResponseEntity<>(commentService.updateComment(commentId, requestDto, user), HttpStatus.OK);

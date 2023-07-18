@@ -6,6 +6,7 @@ import com.sparta.communityback.dto.StatusResponseDto;
 import com.sparta.communityback.jwt.JwtUtil;
 import com.sparta.communityback.service.PostService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,14 +23,14 @@ public class PostController {
 
     //<전체 조회하기>
     @GetMapping()
-    public List<PostResponseDto> getPosts() {
-        return postService.findAll();
+    public List<PostResponseDto> getPosts(@PathVariable Long boardId) {
+        return postService.findAll(boardId);
     }
 
     //<게시글 작성하기>
     @PostMapping("/posts")
     public PostResponseDto createPost(@PathVariable Long boardId,
-                                      @RequestBody PostRequestDto postRequestDto,
+                                      @RequestBody @Valid PostRequestDto postRequestDto,
                                       HttpServletRequest req) {
         String token = authentication(req);
         return postService.createPost(postRequestDto, boardId, token);
@@ -66,7 +67,7 @@ public class PostController {
 
     //<게시글 수정하기>
     @PutMapping("/posts/{postId}")
-    public PostResponseDto updatePost(@PathVariable("postId") Long id, @RequestBody PostRequestDto requestDto, HttpServletRequest req){
+    public PostResponseDto updatePost(@PathVariable("postId") Long id, @RequestBody @Valid PostRequestDto requestDto, HttpServletRequest req){
         String token = authentication(req);
         return postService.updatePost(id, requestDto, token);
 
