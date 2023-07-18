@@ -6,10 +6,11 @@ import lombok.Getter;
 
 @Getter
 public class BoardResqponseDto {
-    @NotBlank
+    private Long id;
     private String category;
 
     public BoardResqponseDto(Board board) {
+        this.id = board.getId();
         this.category = board.getCategory();
     }
 }
