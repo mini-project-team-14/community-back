@@ -2,6 +2,8 @@ package com.sparta.communityback.controller;
 
 import com.sparta.communityback.dto.ResultResponseDto;
 import com.sparta.communityback.dto.SignupRequestDto;
+import com.sparta.communityback.dto.StatusResponseDto;
+import com.sparta.communityback.dto.UsernameRequestDto;
 import com.sparta.communityback.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,16 +24,23 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping("/signup")
-    public ResponseEntity<ResultResponseDto> signup(@Valid @RequestBody SignupRequestDto requestDto, BindingResult bindingResult) {
-        // Validation 예외처리
-        List<FieldError> fieldErrors = bindingResult.getFieldErrors();
-        if(fieldErrors.size() > 0) {
-            for (FieldError fieldError : bindingResult.getFieldErrors()) {
-                log.error(fieldError.getField() + " 필드 : " + fieldError.getDefaultMessage());
-            }
-//            return "redirect:/api/user/signup";
-        }
+    public ResponseEntity<StatusResponseDto> signup(@RequestBody @Valid SignupRequestDto requestDto) {
+//    , BindingResult bindingResult) {
+//        // Validation 예외처리
+//        List<FieldError> fieldErrors = bindingResult.getFieldErrors();
+//        if(fieldErrors.size() > 0) {
+//            for (FieldError fieldError : bindingResult.getFieldErrors()) {
+//                log.error(fieldError.getField() + " 필드 : " + fieldError.getDefaultMessage());
+//            }
+////            return "redirect:/api/user/signup";
+//        }
+        return ResponseEntity.ok()
+                .body(userService.signup(requestDto));
+    }
 
-        return userService.signup(requestDto);
+    @PostMapping("/signup/check")
+    public ResponseEntity<StatusResponseDto> checkUsername(@RequestBody @Valid UsernameRequestDto requestDto) {
+        return ResponseEntity.ok()
+                .body(userService.checkUsername(requestDto));
     }
 }

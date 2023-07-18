@@ -11,6 +11,7 @@ import com.sparta.communityback.repository.CommentLikeRepository;
 import com.sparta.communityback.repository.CommentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AuthorizationServiceException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -75,7 +76,7 @@ public class CommentService {
 
     private Comment findComment(Long id) {
         return commentRepository.findById(id).orElseThrow(() ->
-                new IllegalArgumentException("존재하지 않는 댓글 입니다.")
+                new NullPointerException("존재하지 않는 댓글 입니다.")
         );
     }
     // 수정, 삭제시 권한을 확인 .
@@ -83,8 +84,8 @@ public class CommentService {
         // admin 확인
         if(!user.getRole().getAuthority().equals("ROLE_ADMIN")){
             // 작성자 본인 확인
-            if (!comment.getUser().getId().equals(user.getId())) {
-                throw new IllegalArgumentException("작성자만 삭제/수정할 수 있습니다.");
+            if (!comment.getUser().getUserId().equals(user.getUserId())) {
+                throw new AuthorizationServiceException("작성자만 삭제/수정할 수 있습니다.");
             }
         }
     }

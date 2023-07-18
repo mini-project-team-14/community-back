@@ -49,7 +49,6 @@ public class BoardService {
         checkAuthority_admin(user);
         Board board = findBoard(boardId);
         board.update(boardRequestDto);
-
         return new BoardResqponseDto(board);
     }
 
@@ -57,7 +56,6 @@ public class BoardService {
         checkAuthority_admin(user);
         Board board = findBoard(boardId);
         boardReqpository.delete(board);
-
         return new ResultResponseDto("삭제가 완료 되었습니다.");
 
     }
@@ -69,13 +67,11 @@ public class BoardService {
         }
     }
 
-    private Board findBoard(Long boardId) {
+    protected Board findBoard(Long boardId) {
         Board targetBoard = boardReqpository.findById(boardId).orElseThrow(() ->
-                new NullPointerException("그런 게시판은 존재하지 않습니다.")
+                new NullPointerException("해당 게시판은 존재하지 않습니다.")
         );
         return targetBoard;
     }
-
-
 }
 

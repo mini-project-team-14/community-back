@@ -7,6 +7,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AuthorizationServiceException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -15,6 +16,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import javax.security.sasl.AuthenticationException;
 import java.io.IOException;
 
 @Slf4j(topic = "JWT 검증 및 인가")
@@ -32,15 +34,15 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain filterChain) throws ServletException, IOException {
 
         String tokenValue = jwtUtil.getTokenFromRequest(req);
-        String tokenvalue = jwtUtil.getJwtFromHeader(req);
-        log.info(tokenValue);
+//        String tokenvalue = jwtUtil.getJwtFromHeader(req);
+        log.info("tokenvalue : " + tokenValue);
 
         if (StringUtils.hasText(tokenValue)) {
             tokenValue = jwtUtil.substringToken(tokenValue);
 
             if (!jwtUtil.validateToken(tokenValue)) {
                 log.error("Token Error");
-                return;
+                throw new AuthorizationServiceException("유효하지 않은 토큰 입니다.");
             }
 
             Claims info = jwtUtil.getUserInfoFromToken(tokenValue);
@@ -49,7 +51,7 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
                 setAuthentication(info.getSubject());
             } catch (Exception e) {
                 log.error(e.getMessage());
-                return;
+                throw new AuthorizationServiceException(e.getMessage());
             }
         }
 

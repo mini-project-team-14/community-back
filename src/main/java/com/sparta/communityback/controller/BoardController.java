@@ -7,6 +7,7 @@ import com.sparta.communityback.jwt.JwtUtil;
 import com.sparta.communityback.security.UserDetailsImpl;
 import com.sparta.communityback.service.BoardService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,8 +29,8 @@ public class BoardController {
         return boardService.findAll();
     }
 
-    @PostMapping("/abcd")
-    public ResponseEntity<BoardResqponseDto> createBoard(@RequestBody BoardRequestDto boardRequestDto,
+    @PostMapping()
+    public ResponseEntity<BoardResqponseDto> createBoard(@RequestBody @Valid BoardRequestDto boardRequestDto,
                                               @AuthenticationPrincipal UserDetailsImpl userDetails) {
         User user = userDetails.getUser();
         return ResponseEntity.ok()
@@ -38,7 +39,7 @@ public class BoardController {
 
     @PutMapping("{boardId}")
     public ResponseEntity<BoardResqponseDto> updateBoard(@PathVariable Long boardId,
-                                             @RequestBody BoardRequestDto boardRequestDto,
+                                             @RequestBody @Valid BoardRequestDto boardRequestDto,
                                              @AuthenticationPrincipal UserDetailsImpl userDetails) {
         User user = userDetails.getUser();
         return ResponseEntity.ok()
