@@ -135,8 +135,8 @@ public class JwtUtil {
                 throw null;
             }
         }
-        return null;
-//        throw new IllegalArgumentException("토큰이 존재하지 않습니다. 로그인 해주세요.");
+//        return null;
+        throw new NullPointerException("토큰이 존재하지 않습니다. 로그인 해주세요.");
     }
 
     public String substringToken(String tokenValue) {
@@ -144,6 +144,6 @@ public class JwtUtil {
             return tokenValue.substring(7);
         }
         logger.error("Not Found Token");
-        throw new NullPointerException("Not Found Token");
+        throw new NullPointerException("토큰이 존재하지 않습니다. 로그인 해주세요.");
     }
 }

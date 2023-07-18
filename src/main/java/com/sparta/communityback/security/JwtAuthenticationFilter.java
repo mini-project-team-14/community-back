@@ -29,6 +29,7 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
 
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
+        log.info("attemptAuthentication");
         try {
             LoginRequestDto requestDto = new ObjectMapper().readValue(request.getInputStream(), LoginRequestDto.class);
 
@@ -50,12 +51,12 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
 
     @Override
     protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException {
-
-        String tokenValue = jwtUtil.getTokenFromRequest(request);
+        log.info("successfulAuthentication");
+//        String tokenValue = jwtUtil.getTokenFromRequest(request);
 
 //        String headerToken = request.getHeader(JwtUtil.AUTHORIZATION_HEADER); // 헤더에서 토큰을 가져옴
 
-        if (tokenValue == null) {
+//        if (tokenValue == null) {
             String username = ((UserDetailsImpl) authResult.getPrincipal()).getUsername();
             UserRoleEnum role = ((UserDetailsImpl) authResult.getPrincipal()).getUser().getRole();
 
@@ -82,16 +83,17 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
             new ObjectMapper().writeValue(response.getOutputStream(), new ResultResponseDto("로그인 성공"));
 //            String json = new ObjectMapper().writeValueAsString(new ResultResponseDto("로그인 성공"));
 //            response.getWriter().write(json);
-        } else {
-            response.setStatus(200);
-            new ObjectMapper().writeValue(response.getOutputStream(), new ResultResponseDto("로그인 상태입니다."));
-//            String json = new ObjectMapper().writeValueAsString(new ResultResponseDto("로그인 상태입니다."));
-//            response.getWriter().write(json);
-        }
+//        } else {
+//            response.setStatus(200);
+//            new ObjectMapper().writeValue(response.getOutputStream(), new ResultResponseDto("로그인 상태입니다."));
+////            String json = new ObjectMapper().writeValueAsString(new ResultResponseDto("로그인 상태입니다."));
+////            response.getWriter().write(json);
+//        }
     }
 
     @Override
     protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, AuthenticationException failed) throws IOException {
+        log.info("unsuccessfulAuthentication");
         response.setStatus(400);
         response.setContentType("application/json;charset=UTF-8");
 //        response.setCharacterEncoding("UTF-8");

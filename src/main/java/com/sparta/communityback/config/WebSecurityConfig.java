@@ -2,6 +2,7 @@ package com.sparta.communityback.config;
 
 
 import com.sparta.communityback.jwt.JwtUtil;
+import com.sparta.communityback.security.AuthExceptionFilter;
 import com.sparta.communityback.security.JwtAuthenticationFilter;
 import com.sparta.communityback.security.JwtAuthorizationFilter;
 import com.sparta.communityback.security.UserDetailsServiceImpl;
@@ -15,12 +16,14 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -92,9 +95,25 @@ public class WebSecurityConfig implements WebMvcConfigurer {
         return filter;
     }
 
+//    @Bean
+//    public JwtAuthorizationFilter jwtAuthorizationFilter() {
+//        return new JwtAuthorizationFilter(jwtUtil, userDetailsService);
+//    }
+//
+//    @Bean
+//    public AuthExceptionFilter authExceptionFilter() {
+//        return new AuthExceptionFilter();
+//    }
+
     @Bean
-    public JwtAuthorizationFilter jwtAuthorizationFilter() {
-        return new JwtAuthorizationFilter(jwtUtil, userDetailsService);
+    public WebSecurityCustomizer webSecurityCustomizer(){
+        return web -> {
+            web.ignoring()
+//                    .requestMatchers(new AntPathRequestMatcher("/api/user/**"))
+//                    .requestMatchers( new AntPathRequestMatcher("/api/boards/**", "GET"));
+                    .requestMatchers("/api/user/**")
+                    .requestMatchers(HttpMethod.GET, "/api/boards/**");
+        };
     }
 
     @Bean
@@ -112,7 +131,7 @@ public class WebSecurityConfig implements WebMvcConfigurer {
                         .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll() // resources 접근 허용 설정
 //                        .requestMatchers("/").permitAll()
                         .requestMatchers("/api/user/**").permitAll() // '/api/user/'로 시작하는 요청 모두 접근 허가
-//                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Preflight Request 허용해주기
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Preflight Request 허용해주기
                         .anyRequest().authenticated() // 그 외 모든 요청 인증처리
         );
 
@@ -121,13 +140,25 @@ public class WebSecurityConfig implements WebMvcConfigurer {
 //                        .loginPage(LOGIN_URL).permitAll()
 //        );
         http.cors(Customizer.withDefaults());
-        // corsConfig setting -------------------------------
+//        // corsConfig setting -------------------------------
 //        http.addFilterBefore(corsConfig.corsFilter(), JwtAuthenticationFilter.class); // SPRING 3.0
 
         // 필터 관리
 
-        http.addFilterBefore(jwtAuthorizationFilter(), JwtAuthenticationFilter.class);
-        http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+
+//        http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+//        http.addFilterBefore(jwtAuthorizationFilter(), JwtAuthenticationFilter.class);
+//        http.addFilterBefore(authExceptionFilter(), JwtAuthorizationFilter.class);
+
+//        http.addFilterBefore(jwtAuthorizationFilter(), UsernamePasswordAuthenticationFilter.class);
+//        http.addFilterBefore(authExceptionFilter(), JwtAuthorizationFilter.class);
+
+//        http.addFilterBefore(new JwtAuthenticationFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);
+//        http.addFilterBefore(new JwtAuthorizationFilter(jwtUtil,userDetailsService), JwtAuthenticationFilter.class);
+//        http.addFilterBefore(new AuthExceptionFilter(), JwtAuthorizationFilter.class);
+
+        http.addFilterBefore(new JwtAuthorizationFilter(jwtUtil,userDetailsService), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(new AuthExceptionFilter(), JwtAuthorizationFilter.class);
 
         return http.build();
     }
