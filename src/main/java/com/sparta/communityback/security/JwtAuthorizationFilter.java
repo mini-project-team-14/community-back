@@ -19,7 +19,6 @@ import java.io.IOException;
 
 @Slf4j(topic = "JWT 검증 및 인가")
 public class JwtAuthorizationFilter extends OncePerRequestFilter {
-
     private final JwtUtil jwtUtil;
     private final UserDetailsServiceImpl userDetailsService;
 
@@ -30,11 +29,8 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain filterChain) throws ServletException, IOException {
-
         String tokenValue = jwtUtil.getJwtFromHeader(req);
-
         if (StringUtils.hasText(tokenValue)) {
-
             if (!jwtUtil.validateToken(tokenValue)) {
                 log.error("Token Error");
                 return;
@@ -58,7 +54,6 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         Authentication authentication = createAuthentication(username);
         context.setAuthentication(authentication);
-
         SecurityContextHolder.setContext(context);
     }
 

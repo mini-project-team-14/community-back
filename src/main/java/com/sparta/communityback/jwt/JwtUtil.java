@@ -1,6 +1,7 @@
 package com.sparta.communityback.jwt;
 
 import com.sparta.communityback.entity.UserRoleEnum;
+import com.sparta.communityback.repository.RedisRepository;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
@@ -23,13 +24,22 @@ public class JwtUtil {
     public static final String AUTHORIZATION_KEY = "auth";
     // Token 식별자
     public static final String BEARER_PREFIX = "Bearer ";
-    // 토큰 만료시간
-    private final long TOKEN_TIME = 60 * 60 * 1000L; // 60분
+
+    // accessToken 만료시간
+    private final long TOKEN_TIME = 60 * 60 * 1000L; // 한시간
+
+    // refreshToken 만료시간
+    private final long REFRESH_TOKEN_TIME = 14 * 24 * 60 * 60 * 1000L; //2주
 
     @Value("${jwt.secret.key}") // Base64 Encode 한 SecretKey
     private String secretKey;
     private Key key;
     private final SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
+    private final RedisRepository redisRepository;
+
+    public JwtUtil(RedisRepository redisRepository) {
+        this.redisRepository = redisRepository;
+    }
 
     @PostConstruct
     public void init() {
@@ -37,8 +47,7 @@ public class JwtUtil {
         key = Keys.hmacShaKeyFor(bytes);
     }
 
-    // 토큰 생성
-    public String createToken(String username, UserRoleEnum role) {
+    public String createAccessToken(String username, UserRoleEnum role) {
         Date date = new Date();
 
         return BEARER_PREFIX +
@@ -50,6 +59,18 @@ public class JwtUtil {
                         .signWith(key, signatureAlgorithm) // 암호화 알고리즘
                         .compact();
     }
+
+    public String createRefreshToken(String username){
+        Date now = new Date();
+
+        return Jwts.builder()
+                .setSubject(username) // 사용자 식별자값(ID)
+                .setExpiration(new Date(now.getTime() + REFRESH_TOKEN_TIME)) // 만료 시간
+                .setIssuedAt(now) // 발급일
+                .signWith(key, signatureAlgorithm) // 암호화 알고리즘
+                .compact();
+    }
+
 
     // header 에서 JWT 가져오기
     public String getJwtFromHeader(HttpServletRequest request) {
@@ -63,12 +84,23 @@ public class JwtUtil {
     // 토큰 검증
     public boolean validateToken(String token) {
         try {
+
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
             return true;
         } catch (SecurityException | MalformedJwtException | SignatureException e) {
             log.error("Invalid JWT signature, 유효하지 않는 JWT 서명 입니다.");
+
         } catch (ExpiredJwtException e) {
-            log.error("Expired JWT token, 만료된 JWT token 입니다.");
+
+            regenerateAccessToken(token);
+//            if(redisService.getRefreshToken(Long.valueOf(claims.getId())) == null){
+                log.error("Expired JWT token, 만료된 JWT token 입니다.");
+//            }
+//            else{
+//                // 토큰 재생성
+//                regenerateAccessToken(claims.getId());
+//            }
+
         } catch (UnsupportedJwtException e) {
             log.error("Unsupported JWT token, 지원되지 않는 JWT 토큰 입니다.");
         } catch (IllegalArgumentException e) {
@@ -81,4 +113,12 @@ public class JwtUtil {
     public Claims getUserInfoFromToken(String token) {
         return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
     }
+
+    private void regenerateAccessToken(String token) {
+        Claims claims = getUserInfoFromToken(token);
+        String username = claims.getSubject();
+        UserRoleEnum userRole = (UserRoleEnum) claims.get("auth");
+        createAccessToken(username, userRole);
+    }
+
 }
