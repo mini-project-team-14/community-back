@@ -15,6 +15,7 @@ import com.sparta.communityback.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AuthorizationServiceException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,10 +32,13 @@ public class PostService {
     private final JwtUtil jwtUtil;
 
     //<전체 조회하기>
-    public List<PostResponseDto> findAll() {
+    public List<PostResponseDto> findAll(Long boardId) {
+        Board board = boardReqpository.findById(boardId).orElseThrow(() ->
+                new NullPointerException("해당 게시판은 존재하지 않습니다"));
         // db 조회 넘겨주기
-        return postRepository.findAllByOrderByCreatedAtDesc()
+        return postRepository.findByBoardOrderByCreatedAtDesc(board)
                 .stream()
+
                 .map(PostResponseDto::new)
                 .toList();
     }
@@ -46,7 +50,7 @@ public class PostService {
         );
         String username = getUsername(token);
         User user = userRepository.findByUsername(username).orElseThrow(()->
-                new IllegalArgumentException("해당 유저는 존재하지 않습니다"));
+                new NullPointerException("해당 유저는 존재하지 않습니다"));
         Post post = new Post(requestDto, board, user);
 //        post.connectUser(user);
         Post savePost = postRepository.save(post);
@@ -56,7 +60,7 @@ public class PostService {
     //<게시글 좋아요 추가>
     public void addLikeToPost(Long postId) {
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+                .orElseThrow(() -> new NullPointerException("게시글을 찾을 수 없습니다."));
         if (!post.getPostLikes().isEmpty()) {
             throw new IllegalStateException("이미 좋아요를 눌렀습니다.");
         }
@@ -92,7 +96,7 @@ public class PostService {
         Post post = findPost(id);
         String username = getUsername(token);
         User user = userRepository.findByUsername(username).orElseThrow(()->
-                new IllegalArgumentException("해당 유저는 존재하지 않습니다"));
+                new NullPointerException("해당 유저는 존재하지 않습니다"));
         // 권한 확인
         checkAuthority(post, user);
         // 수정
@@ -107,7 +111,7 @@ public class PostService {
         Post post = findPost(id);
         String username = getUsername(token);
         User user = userRepository.findByUsername(username).orElseThrow(()->
-                new IllegalArgumentException("해당 유저는 존재하지 않습니다"));
+                new NullPointerException("해당 유저는 존재하지 않습니다"));
         // 권한 확인
         checkAuthority(post, user);
         // 삭제
@@ -119,7 +123,7 @@ public class PostService {
 
     protected Post findPost(Long id) {
         return postRepository.findById(id).orElseThrow(() ->
-                new IllegalArgumentException("존재하지 않는 게시물 입니다.")
+                new NullPointerException("존재하지 않는 게시물 입니다.")
         );
     }
 
@@ -129,7 +133,7 @@ public class PostService {
             // username만 확인하는 것 보다 이쪽이 더 안전하다고 생각하여 작성하였으나 true가 나오지 않음.
 //            if (!post.getUser().equals(user)) {
             if (post.getUser().getId() != user.getId()) {
-                throw new IllegalArgumentException("작성자만 삭제/수정할 수 있습니다.");
+                throw new AuthorizationServiceException("작성자만 삭제/수정할 수 있습니다.");
             }
         }
     }
