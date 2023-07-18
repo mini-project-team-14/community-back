@@ -54,21 +54,18 @@ public class PostService {
     }
 
     //<게시글 좋아요 추가>
-    public void addLikeToPost(Long postId) {
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
-        if (!post.getPostLikes().isEmpty()) {
-            throw new IllegalStateException("이미 좋아요를 눌렀습니다.");
+    public StatusResponseDto postLike(Long postId, User user) {
+        Post post = findPost(postId);
+        PostLike checkPostLike = postLikeRepository.findByPostAndUser(post, user).orElse(null);
+        if (checkPostLike == null) {
+            PostLike postLike = new PostLike(user, post);
+            postLikeRepository.save(postLike);
+            return new StatusResponseDto(HttpStatus.CREATED.value(), "좋아요");
+        } else {
+            postLikeRepository.delete(checkPostLike);
+            return new StatusResponseDto(HttpStatus.OK.value(), "좋아요 취소");
         }
-        post.addLike(new PostLike());
-        postRepository.save(post);
-    }
-    //<게시글 좋아요 취소>
-    public void removeLikeFromPost(Long postId) {
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("이미 좋아요를 취소했습니다"));
-        post.decreasedLikeCount();
-        postRepository.save(post);
+
     }
 
     //payload에 들어갈 정보들이 claim
