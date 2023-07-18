@@ -16,7 +16,7 @@ public class PostResponseDto {
     private LocalDateTime createdAt;
     private LocalDateTime modifiedAt;
     private List<CommentResponseDto> comments;
-    private Integer countLikes; // 수정 예정
+    private Integer countLikes;
 
     public PostResponseDto(Post post) {
         this.id = post.getId();
