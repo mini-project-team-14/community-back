@@ -3,10 +3,12 @@ package com.sparta.communityback.service;
 import com.sparta.communityback.dto.PostRequestDto;
 import com.sparta.communityback.dto.PostResponseDto;
 import com.sparta.communityback.dto.StatusResponseDto;
+import com.sparta.communityback.entity.Board;
 import com.sparta.communityback.entity.Post;
 import com.sparta.communityback.entity.PostLike;
 import com.sparta.communityback.entity.User;
 import com.sparta.communityback.jwt.JwtUtil;
+import com.sparta.communityback.repository.BoardReqpository;
 import com.sparta.communityback.repository.PostLikeRepository;
 import com.sparta.communityback.repository.PostRepository;
 import com.sparta.communityback.repository.UserRepository;
@@ -24,6 +26,7 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final BoardReqpository boardReqpository;
     private final PostLikeRepository postLikeRepository;
     private final JwtUtil jwtUtil;
 
@@ -37,12 +40,15 @@ public class PostService {
     }
 
     //<게시글 작성하기>
-    public PostResponseDto createPost(PostRequestDto requestDto, String token) {
+    public PostResponseDto createPost(PostRequestDto requestDto, Long boardId, String token) {
+        Board board = boardReqpository.findById(boardId).orElseThrow(() ->
+                new NullPointerException("해당 게시판은 존재하지 않습니다")
+        );
         String username = getUsername(token);
         User user = userRepository.findByUsername(username).orElseThrow(()->
                 new IllegalArgumentException("해당 유저는 존재하지 않습니다"));
-        Post post = new Post(requestDto, user);
-        post.connectUser(user);
+        Post post = new Post(requestDto, board, user);
+//        post.connectUser(user);
         Post savePost = postRepository.save(post);
         return new PostResponseDto(savePost);
     }

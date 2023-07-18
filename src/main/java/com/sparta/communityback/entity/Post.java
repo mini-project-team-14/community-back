@@ -26,12 +26,10 @@ public class Post extends Timestamped{
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "board")
     private Board board;
 
     // post 삭제시 comment가 같이 삭제되도록 cascade 추가
     @OrderBy("createdAt desc")
-
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Comment> comments = new ArrayList<>();
 
@@ -51,8 +49,9 @@ public class Post extends Timestamped{
         }
     }
 
-    public Post(PostRequestDto requestDto, User user) {
+    public Post(PostRequestDto requestDto, Board board, User user) {
         this.title = requestDto.getTitle();
+        this.board = board;
         this.user = user;
         this.content = requestDto.getContent();
     }

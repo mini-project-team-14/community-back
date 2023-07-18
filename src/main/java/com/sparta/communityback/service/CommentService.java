@@ -22,7 +22,7 @@ public class CommentService {
     private final CommentLikeRepository commentLikeRepository;
     private final PostService PostService;
 
-    public CommentResponseDto createComment(Long boardId, Long PostId, CommentRequestDto requestDto, User user) {
+    public CommentResponseDto createComment(Long PostId, CommentRequestDto requestDto, User user) {
         // 해당 게시글이 DB에 존재하는지 확인
         Post targetPost = PostService.findPost(PostId);
         // requestDto를 포함한 comment 저장에 필요한 값들 담아서 주기

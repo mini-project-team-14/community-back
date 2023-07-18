@@ -8,7 +8,7 @@ import lombok.Setter;
 @Entity
 @Getter
 @Setter
-@Table(name = "board_like")
+@Table(name = "board_like") // 수정 필요
 @NoArgsConstructor
 public class PostLike {
     @Id

@@ -126,14 +126,24 @@ public class JwtUtil {
             }
         }
         // 쿠키 없는 경우 헤더에서 값 가져오기
+//        String header = null;
         String header = req.getHeader(AUTHORIZATION_HEADER);
-        if (!header.isEmpty()) {
+        if (header != null) {
             try {
                 return URLDecoder.decode(header, "UTF-8");
             } catch (UnsupportedEncodingException e) {
                 throw null;
             }
         }
-        throw new IllegalArgumentException("토큰이 존재하지 않습니다. 로그인 해주세요.");
+        return null;
+//        throw new IllegalArgumentException("토큰이 존재하지 않습니다. 로그인 해주세요.");
+    }
+
+    public String substringToken(String tokenValue) {
+        if (StringUtils.hasText(tokenValue) && tokenValue.startsWith(BEARER_PREFIX)) {
+            return tokenValue.substring(7);
+        }
+        logger.error("Not Found Token");
+        throw new NullPointerException("Not Found Token");
     }
 }

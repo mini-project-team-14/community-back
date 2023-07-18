@@ -1,5 +1,6 @@
 package com.sparta.communityback.entity;
 
+import com.sparta.communityback.dto.BoardRequestDto;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,10 +17,17 @@ public class Board {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "title", nullable = false)
-    private String title;
+    @Column(name = "category", nullable = false)
+    private String category;
 
     @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Post> posts = new ArrayList<>();
 
+    public Board(BoardRequestDto requestDto) {
+        this.category = requestDto.getCategory();
+    }
+
+    public void update(BoardRequestDto boardRequestDto) {
+        this.category = boardRequestDto.getCategory();
+    }
 }
