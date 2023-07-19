@@ -7,11 +7,11 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public class SignupRequestDto {
-    @NotBlank
+    @NotBlank(message = "username은 공백일 수 없습니다.")
     private String username;
-    @NotBlank
+    @NotBlank(message = "password는 공백일 수 없습니다.")
     private String password;
-    @NotBlank
+    @NotBlank(message = "nickname은 공백일 수 없습니다.")
     private String nickname;
     private boolean admin = false;
     private String adminToken = "";
