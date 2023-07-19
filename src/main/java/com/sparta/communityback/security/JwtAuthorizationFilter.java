@@ -1,6 +1,7 @@
 package com.sparta.communityback.security;
 
 import com.sparta.communityback.jwt.JwtUtil;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,11 +28,13 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain filterChain) throws ServletException, IOException {
 //         String tokenValue = jwtUtil.getTokenFromRequest(req);
         String tokenValue = jwtUtil.getJwtFromHeader(req);
-        if (StringUtils.hasText(tokenValue)) {
+//        if (StringUtils.hasText(tokenValue)) {
             if (!jwtUtil.validateToken(tokenValue, req, res)) {
                 log.error("Token Error: 토큰 재발급이 되었다면 에러가 아닙니다.");
-                return;
-              
+                tokenValue = res.getHeader(jwtUtil.ACCESS_TOKEN).substring(7);
+
+                System.out.println("tokenValue = " + tokenValue);
+            }
             Claims info = jwtUtil.getUserInfoFromToken(tokenValue);
 
             try {
@@ -41,20 +44,20 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
                 throw new AuthorizationServiceException(e.getMessage());
 
             }
-        }
+//        }
 
         filterChain.doFilter(req, res);
     }
     // 인증 처리
-//    public void setAuthentication(String username) {
-//        Authentication authentication = createAuthentication(username);
-//        SecurityContextHolder.getContext().setAuthentication(authentication);
-//        log.info("인증처리: {}", (SecurityContextHolder.getContext().getAuthentication()));
-//    }
-//
-//    // 인증 객체 생성
-//    private Authentication createAuthentication(String username) {
-//        UserDetailsImpl userDetails = (UserDetailsImpl) userDetailsService.loadUserByUsername(username);
-//        return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-//    }
+    public void setAuthentication(String username) {
+        Authentication authentication = createAuthentication(username);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        log.info("인증처리: {}", (SecurityContextHolder.getContext().getAuthentication()));
+    }
+
+    // 인증 객체 생성
+    private Authentication createAuthentication(String username) {
+        UserDetailsImpl userDetails = (UserDetailsImpl) userDetailsService.loadUserByUsername(username);
+        return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+    }
 }

@@ -38,6 +38,7 @@ public class JwtUtil {
 
     // accessToken 만료시간
     private final long TOKEN_TIME = 60 * 60 * 1000L; // 한시간
+//    private final long TOKEN_TIME = 60 * 1000L; // 1분
 
     // refreshToken 만료시간
     private final long REFRESH_TOKEN_TIME = 14 * 24 * 60 * 60 * 1000L; //2주
@@ -89,15 +90,15 @@ public class JwtUtil {
     }
   
     // JWT Cookie 에 저장
-    public void addJwtToCookie(String token, HttpServletResponse res) {
+    public void addJwtToCookie(String token, HttpServletResponse res, String tokenHeader) {
         try {
             token = URLEncoder.encode(token, "utf-8").replaceAll("\\+", "%20"); // Cookie Value 에는 공백이 불가능해서 encoding 진행
 
-            Cookie cookie = new Cookie(AUTHORIZATION_HEADER, token); // Name-Value
+            Cookie cookie = new Cookie(tokenHeader, token); // Name-Value
             cookie.setMaxAge(60 * 60); // 60초 60분 1시간
             cookie.setPath("/");
             // ResponseHeader에 token 추가
-            res.addHeader(AUTHORIZATION_HEADER, token);
+//            res.addHeader(tokenHeader, token);
             // Response 객체에 Cookie 추가
             res.addCookie(cookie);
         } catch (UnsupportedEncodingException e) {
@@ -122,10 +123,11 @@ public class JwtUtil {
             return true;
         } catch (SecurityException | MalformedJwtException | SignatureException e) {
             log.error("Invalid JWT signature, 유효하지 않는 JWT 서명 입니다.");
-        } catch (ExpiredJwtException e) {
+            throw new IllegalArgumentException("Invalid JWT signature, 유효하지 않는 JWT 서명 입니다.");
+        } catch (ExpiredJwtException | IllegalArgumentException e) {
             if(req.getHeader(REFRESH_TOKEN).isEmpty()) {
                 log.error("Expired JWT token, 만료된 JWT token 입니다.");
-                throw new RuntimeException();
+                throw new RuntimeException("Expired JWT token, 만료된 JWT token 입니다.");
             } else {
                 String RefreshToken = req.getHeader(REFRESH_TOKEN);
                 String newAccessToken = regenerateAccessToken(RefreshToken);
@@ -135,23 +137,27 @@ public class JwtUtil {
             }
         } catch (UnsupportedJwtException e) {
             log.error("Unsupported JWT token, 지원되지 않는 JWT 토큰 입니다.");
-        } catch (IllegalArgumentException e) {
-            log.error("JWT claims is empty, 잘못된 JWT 토큰 입니다.");
+            throw new UnsupportedJwtException("Unsupported JWT token, 지원되지 않는 JWT 토큰 입니다.");
         }
         return false;
     }
 
-    private String regenerateAccessToken(String refreshToken) {
+    public String regenerateAccessToken(String refreshToken) {
+        // redis에 토큰이 남아있는지 검증
+        String redisRefreshToken = findRefreshToken(refreshToken);
+        // 토큰 재발급 과정
+        Optional<User> userOptional = userRepository.findById(Long.valueOf(redisRefreshToken));
+        String username = userOptional.get().getUsername();
+        UserRoleEnum userRole = userOptional.get().getRole();
+        return createAccessToken(username, userRole);
+
+    }
+    public String findRefreshToken(String refreshToken) {
         String redisRefreshToken = redisService.getRefreshToken(refreshToken);
         if(redisRefreshToken == null){
             throw new RuntimeException("저장되지 않은 RefreshToken 입니다.");
         }
-        else {
-            Optional<User> userOptional = userRepository.findById(Long.valueOf(redisRefreshToken));
-            String username = userOptional.get().getUsername();
-            UserRoleEnum userRole = userOptional.get().getRole();
-            return createAccessToken(username, userRole);
-        }
+        return redisRefreshToken;
     }
 
     // 토큰에서 사용자 정보 가져오기
@@ -160,40 +166,40 @@ public class JwtUtil {
     }
 
     // HttpServletRequest 에서 Cookie Value : JWT 가져오기
-    public String getTokenFromRequest(HttpServletRequest req) {
-        //쿠키의 경우 모든 쿠기에서 필요로 하는 값을 찾아서
-        Cookie[] cookies = req.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if (cookie.getName().equals(AUTHORIZATION_HEADER)) {
-                    try {
-                        System.out.println(URLDecoder.decode(cookie.getValue(), "UTF-8"));
-                        return URLDecoder.decode(cookie.getValue(), "UTF-8"); // Encode 되어 넘어간 Value(공백 인코딩) 다시 Decode
-                    } catch (UnsupportedEncodingException e) {
-                        return null;
-                    }
-                }
-            }
-        }
-        // 쿠키 없는 경우 헤더에서 값 가져오기
-//        String header = null;
-        String header = req.getHeader(AUTHORIZATION_HEADER);
-        if (header != null) {
-            try {
-                return URLDecoder.decode(header, "UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                throw null;
-            }
-        }
-//        return null;
-        throw new NullPointerException("토큰이 존재하지 않습니다. 로그인 해주세요.");
-    }
-
-    public String substringToken(String tokenValue) {
-        if (StringUtils.hasText(tokenValue) && tokenValue.startsWith(BEARER_PREFIX)) {
-            return tokenValue.substring(7);
-        }
-        logger.error("Not Found Token");
-        throw new NullPointerException("토큰이 존재하지 않습니다. 로그인 해주세요.");
-    }
+//    public String getTokenFromRequest(HttpServletRequest req) {
+//        //쿠키의 경우 모든 쿠기에서 필요로 하는 값을 찾아서
+//        Cookie[] cookies = req.getCookies();
+//        if (cookies != null) {
+//            for (Cookie cookie : cookies) {
+//                if (cookie.getName().equals(AUTHORIZATION_HEADER)) {
+//                    try {
+//                        System.out.println(URLDecoder.decode(cookie.getValue(), "UTF-8"));
+//                        return URLDecoder.decode(cookie.getValue(), "UTF-8"); // Encode 되어 넘어간 Value(공백 인코딩) 다시 Decode
+//                    } catch (UnsupportedEncodingException e) {
+//                        return null;
+//                    }
+//                }
+//            }
+//        }
+//        // 쿠키 없는 경우 헤더에서 값 가져오기
+////        String header = null;
+//        String header = req.getHeader(AUTHORIZATION_HEADER);
+//        if (header != null) {
+//            try {
+//                return URLDecoder.decode(header, "UTF-8");
+//            } catch (UnsupportedEncodingException e) {
+//                throw null;
+//            }
+//        }
+////        return null;
+//        throw new NullPointerException("토큰이 존재하지 않습니다. 로그인 해주세요.");
+//    }
+//
+//    public String substringToken(String tokenValue) {
+//        if (StringUtils.hasText(tokenValue) && tokenValue.startsWith(BEARER_PREFIX)) {
+//            return tokenValue.substring(7);
+//        }
+//        logger.error("Not Found Token");
+//        throw new NullPointerException("토큰이 존재하지 않습니다. 로그인 해주세요.");
+//    }
 }

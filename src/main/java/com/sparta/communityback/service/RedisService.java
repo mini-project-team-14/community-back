@@ -7,6 +7,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 
@@ -26,4 +27,21 @@ public class RedisService {
         ValueOperations<String, String> values = redisTemplate.opsForValue();
         return values.get(refreshToken);
     }
+
+    public String getRefreshToken(Long userId) {
+        ValueOperations<String, String> values = redisTemplate.opsForValue();
+
+// Redis에서 key를 찾기 위해 모든 키를 순회합니다.
+        Set<String> keys = redisTemplate.keys("*");
+        for (String key : keys) {
+            String value = values.get(key);
+            if (value != null && Long.parseLong(value) == userId) {
+                return key; // userId와 일치하는 value를 가진 key를 반환합니다.
+            }
+        }
+
+// 일치하는 userId가 없을 경우 null을 반환합니다.
+        return null;
+    }
+
 }
