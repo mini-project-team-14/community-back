@@ -1,18 +1,13 @@
 package com.sparta.communityback.service;
 
-import com.sparta.communityback.dto.*;
+import com.sparta.communityback.dto.BoardRequestDto;
+import com.sparta.communityback.dto.BoardResqponseDto;
+import com.sparta.communityback.dto.StatusResponseDto;
 import com.sparta.communityback.entity.Board;
-import com.sparta.communityback.entity.Post;
 import com.sparta.communityback.entity.User;
-import com.sparta.communityback.jwt.JwtUtil;
 import com.sparta.communityback.repository.BoardReqpository;
-import com.sparta.communityback.repository.PostRepository;
-import com.sparta.communityback.repository.UserRepository;
-import io.jsonwebtoken.Claims;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AuthorizationServiceException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,9 +18,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BoardService {
 
-    private final JwtUtil jwtUtil;
     private final BoardReqpository boardReqpository;
-    private final UserRepository userRepository;
 
     //<전체 조회하기>
     public List<BoardResqponseDto> findAll() {
@@ -52,11 +45,11 @@ public class BoardService {
         return new BoardResqponseDto(board);
     }
 
-    public ResultResponseDto deleteBoard(Long boardId, User user) {
+    public StatusResponseDto deleteBoard(Long boardId, User user) {
         checkAuthority_admin(user);
         Board board = findBoard(boardId);
         boardReqpository.delete(board);
-        return new ResultResponseDto("삭제가 완료 되었습니다.");
+        return new StatusResponseDto(HttpStatus.OK.value(), "삭제가 완료 되었습니다.");
 
     }
 

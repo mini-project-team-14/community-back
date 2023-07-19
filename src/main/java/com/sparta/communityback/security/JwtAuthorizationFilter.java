@@ -16,7 +16,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import javax.security.sasl.AuthenticationException;
 import java.io.IOException;
 
 @Slf4j(topic = "JWT 검증 및 인가")
@@ -48,7 +47,7 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
             Claims info = jwtUtil.getUserInfoFromToken(tokenValue);
 
             try {
-                setAuthentication(info.getSubject());
+                setAuthentication(info.getSubject());// 만일 토큰에 넣어주는 방식을 바꾸게 될경우 여기를 수정
             } catch (Exception e) {
                 log.error(e.getMessage());
                 throw new AuthorizationServiceException(e.getMessage());

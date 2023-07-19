@@ -4,10 +4,8 @@ import com.sparta.communityback.dto.PostRequestDto;
 import com.sparta.communityback.dto.PostResponseDto;
 import com.sparta.communityback.dto.StatusResponseDto;
 import com.sparta.communityback.entity.User;
-import com.sparta.communityback.jwt.JwtUtil;
 import com.sparta.communityback.security.UserDetailsImpl;
 import com.sparta.communityback.service.PostService;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,7 +21,6 @@ import java.util.List;
 public class PostController {
 
     private final PostService postService;
-    private final JwtUtil jwtUtil;
 
     //<전체 조회하기>
     @GetMapping()
@@ -41,34 +38,39 @@ public class PostController {
     }
 
     @PostMapping("/posts/{postId}/like")
-    public ResponseEntity<StatusResponseDto> postlike(@PathVariable Long postId,
-                                                      @AuthenticationPrincipal UserDetailsImpl userDetails){
+    public ResponseEntity<StatusResponseDto> postLike(@PathVariable Long boardId,
+                                                      @PathVariable Long postId,
+                                                      @AuthenticationPrincipal UserDetailsImpl userDetails) {
         User user = userDetails.getUser();
-        StatusResponseDto statusResponseDto = postService.postLike(postId, user);
+        StatusResponseDto statusResponseDto = postService.postLike(boardId, postId, user);
         return new ResponseEntity<>(statusResponseDto, HttpStatus.OK);
     }
 
-
     //<상세 조회하기>
     @GetMapping("/posts/{postId}")
-    public PostResponseDto getPost(@PathVariable Long postId){
-        return postService.getSelectedPost(postId);
+    public PostResponseDto getPost(@PathVariable Long boardId,
+                                   @PathVariable Long postId) {
+        return postService.getSelectedPost(boardId, postId);
     }
 
     //<게시글 수정하기>
     @PutMapping("/posts/{postId}")
-    public PostResponseDto updatePost(@PathVariable Long postId, @RequestBody @Valid PostRequestDto requestDto,
+    public PostResponseDto updatePost(@PathVariable Long boardId,
+                                      @PathVariable Long postId,
+                                      @RequestBody @Valid PostRequestDto requestDto,
                                       @AuthenticationPrincipal UserDetailsImpl userDetails) {
         User user = userDetails.getUser();
-        return postService.updatePost(postId, requestDto, user);
+        return postService.updatePost(boardId, postId, requestDto, user);
 
     }
+
     //<삭제하기>
     @DeleteMapping("/posts/{postId}")
-    public StatusResponseDto deletePost(@PathVariable Long postId,
+    public StatusResponseDto deletePost(@PathVariable Long boardId,
+                                        @PathVariable Long postId,
                                         @AuthenticationPrincipal UserDetailsImpl userDetails) {
         User user = userDetails.getUser();
-        return postService.deletePost(postId, user);
+        return postService.deletePost(boardId, postId, user);
     }
 
 }

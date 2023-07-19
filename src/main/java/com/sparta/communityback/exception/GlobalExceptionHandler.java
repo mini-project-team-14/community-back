@@ -1,6 +1,5 @@
 package com.sparta.communityback.exception;
 
-import com.sparta.communityback.dto.ResultResponseDto;
 import com.sparta.communityback.dto.StatusResponseDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -24,6 +23,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest()
                 .body(restApiException);
     }
+
     // MethodArgumentNotValidException (requestDto에서 valid 관련해서 생기는 예외) 처리
     @ExceptionHandler({MethodArgumentNotValidException.class})
     public ResponseEntity<StatusResponseDto> handleException(MethodArgumentNotValidException ex) {
@@ -31,15 +31,11 @@ public class GlobalExceptionHandler {
         ex.getFieldErrors().forEach((e) -> {
             sb.append(e.getDefaultMessage()).append(" / ");
         });
-        sb.setLength(sb.length()-3);
+        sb.setLength(sb.length() - 3);
         StatusResponseDto restApiException = new StatusResponseDto(
                 HttpStatus.BAD_REQUEST.value(),
                 sb.toString()
         );
-//
-//        StatusCodesResponseDto restApiException = new StatusCodesResponseDto(
-//                HttpStatus.BAD_REQUEST.value(),
-//                ex.getFieldError().getDefaultMessage());
         return ResponseEntity.badRequest().body(restApiException);
     }
 
@@ -67,7 +63,7 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST.value(),
                 ex.getMessage()
         );
-        return new ResponseEntity<>(restApiException, HttpStatus.BAD_REQUEST);// unauthorized가 없음...
+        return new ResponseEntity<>(restApiException, HttpStatus.BAD_REQUEST);
     }
 
 

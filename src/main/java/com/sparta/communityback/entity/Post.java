@@ -4,7 +4,6 @@ import com.sparta.communityback.dto.PostRequestDto;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.ColumnDefault;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,18 +22,20 @@ public class Post extends Timestamped {
     private String content;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "board_id")
     private Board board;
+
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<PostLike> postLikes = new ArrayList<>();
 
     // post 삭제시 comment가 같이 삭제되도록 cascade 추가
     @OrderBy("createdAt ASC")
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Comment> comments = new ArrayList<>();
-
-    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<PostLike> postLikes = new ArrayList<>();
 
     public Post(PostRequestDto requestDto, Board board, User user) {
         this.title = requestDto.getTitle();
@@ -46,10 +47,6 @@ public class Post extends Timestamped {
     public void update(PostRequestDto requestDto) {
         this.title = requestDto.getTitle();
         this.content = requestDto.getContent();
-    }
-
-    public void connectUser(User user) {
-        this.user = user;
     }
 }
 

@@ -12,7 +12,7 @@ import java.util.List;
 @Getter
 @Table(name = "comment")
 @NoArgsConstructor
-public class Comment extends Timestamped{
+public class Comment extends Timestamped {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long commentId;
@@ -20,9 +20,11 @@ public class Comment extends Timestamped{
     private String comment;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "post_id")
     private Post post;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
     private User user;
 
     @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

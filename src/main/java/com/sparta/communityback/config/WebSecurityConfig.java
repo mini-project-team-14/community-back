@@ -23,12 +23,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
@@ -41,29 +38,9 @@ public class WebSecurityConfig implements WebMvcConfigurer {
     private final UserDetailsServiceImpl userDetailsService;
     private final AuthenticationConfiguration authenticationConfiguration;
     private final static String LOGIN_URL = "/api/user/login";
-    // cors
-    // 추후에 프록시 서버를 이용, rest template로도 해결 가능
-//    @Override
-//    public void addCorsMappings(CorsRegistry registry) {
-//        registry.addMapping("/**")
-//                .allowedOrigins("http://localhost:3000", "http://127.0.0.1:3000/",  "http://13.125.15.196:8080/")
-////                .allowCredentials(true)
-//                .allowedMethods("GET", "POST", "DELETE", "PUT", "OPTIONS", "HEAD");
-////                .maxAge(3000);
-//    }
-/*
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**")
-                .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD")
-                .allowedOrigins("http://localhost:8080", "http://localhost:63342", "http://127.0.0.1:5500/", "https://api.odle8.com/", "https://odle8.com/")
-                .exposedHeaders("Authorization", "RefreshToken");
-    }
-}
-   */
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource(){
+    public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 //        config.addAllowedOriginPattern("*");
         config.setAllowCredentials(true);
@@ -95,22 +72,10 @@ public class WebSecurityConfig implements WebMvcConfigurer {
         return filter;
     }
 
-//    @Bean
-//    public JwtAuthorizationFilter jwtAuthorizationFilter() {
-//        return new JwtAuthorizationFilter(jwtUtil, userDetailsService);
-//    }
-//
-//    @Bean
-//    public AuthExceptionFilter authExceptionFilter() {
-//        return new AuthExceptionFilter();
-//    }
-
     @Bean
-    public WebSecurityCustomizer webSecurityCustomizer(){
+    public WebSecurityCustomizer webSecurityCustomizer() {
         return web -> {
             web.ignoring()
-//                    .requestMatchers(new AntPathRequestMatcher("/api/user/**"))
-//                    .requestMatchers( new AntPathRequestMatcher("/api/boards/**", "GET"));
                     .requestMatchers("/api/user/**")
                     .requestMatchers(HttpMethod.GET, "/api/boards/**");
         };
@@ -127,12 +92,11 @@ public class WebSecurityConfig implements WebMvcConfigurer {
         );
 
         http.authorizeHttpRequests((authorizeHttpRequests) ->
-                authorizeHttpRequests
-                        .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll() // resources 접근 허용 설정
-//                        .requestMatchers("/").permitAll()
-                        .requestMatchers("/api/user/**").permitAll() // '/api/user/'로 시작하는 요청 모두 접근 허가
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Preflight Request 허용해주기
-                        .anyRequest().authenticated() // 그 외 모든 요청 인증처리
+                        authorizeHttpRequests
+                                .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll() // resources 접근 허용 설정
+                                .requestMatchers("/api/user/**").permitAll() // '/api/user/'로 시작하는 요청 모두 접근 허가
+                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Preflight Request 허용해주기
+                                .anyRequest().authenticated() // 그 외 모든 요청 인증처리
         );
 
 //        http.formLogin((formLogin) ->
@@ -150,14 +114,7 @@ public class WebSecurityConfig implements WebMvcConfigurer {
 //        http.addFilterBefore(jwtAuthorizationFilter(), JwtAuthenticationFilter.class);
 //        http.addFilterBefore(authExceptionFilter(), JwtAuthorizationFilter.class);
 
-//        http.addFilterBefore(jwtAuthorizationFilter(), UsernamePasswordAuthenticationFilter.class);
-//        http.addFilterBefore(authExceptionFilter(), JwtAuthorizationFilter.class);
-
-//        http.addFilterBefore(new JwtAuthenticationFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);
-//        http.addFilterBefore(new JwtAuthorizationFilter(jwtUtil,userDetailsService), JwtAuthenticationFilter.class);
-//        http.addFilterBefore(new AuthExceptionFilter(), JwtAuthorizationFilter.class);
-
-        http.addFilterBefore(new JwtAuthorizationFilter(jwtUtil,userDetailsService), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(new JwtAuthorizationFilter(jwtUtil, userDetailsService), UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(new AuthExceptionFilter(), JwtAuthorizationFilter.class);
 
         return http.build();

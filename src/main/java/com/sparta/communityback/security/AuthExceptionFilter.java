@@ -1,7 +1,6 @@
 package com.sparta.communityback.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sparta.communityback.dto.ResultResponseDto;
 import com.sparta.communityback.dto.StatusResponseDto;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
