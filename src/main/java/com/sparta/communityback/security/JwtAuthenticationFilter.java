@@ -3,11 +3,14 @@ package com.sparta.communityback.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sparta.communityback.dto.LoginRequestDto;
 import com.sparta.communityback.dto.ResultResponseDto;
+import com.sparta.communityback.entity.RefreshToken;
 import com.sparta.communityback.entity.UserRoleEnum;
 import com.sparta.communityback.jwt.JwtUtil;
+import com.sparta.communityback.service.RedisService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -19,28 +22,24 @@ import java.io.IOException;
 
 //@CrossOrigin(originPatterns = "http://localhost:3000")
 @Slf4j(topic = "로그인 및 JWT 생성")
+@RequiredArgsConstructor
 public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
     private final JwtUtil jwtUtil;
-
-    public JwtAuthenticationFilter(JwtUtil jwtUtil) {
-        this.jwtUtil = jwtUtil;
-        setFilterProcessesUrl("/api/user/login");
-    }
+    private final RedisService redisService;
 
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
+
         log.info("attemptAuthentication");
+        log.info("request uri: {}", request.getRequestURI());
+
         try {
             LoginRequestDto requestDto = new ObjectMapper().readValue(request.getInputStream(), LoginRequestDto.class);
-
 
             UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
                     requestDto.getUsername(),
                     requestDto.getPassword()
             );
-
-
-
             return getAuthenticationManager().authenticate(usernamePasswordAuthenticationToken);
         } catch (IOException e) {
             log.error(e.getMessage());
@@ -50,45 +49,34 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
     }
 
     @Override
+
     protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException {
         log.info("successfulAuthentication");
-//        String tokenValue = jwtUtil.getTokenFromRequest(request);
-
-//        String headerToken = request.getHeader(JwtUtil.AUTHORIZATION_HEADER); // 헤더에서 토큰을 가져옴
-
-//        if (tokenValue == null) {
+        if(request.getHeader("AccessToken") == null && request.getHeader("RefreshToken") == null) {
             String username = ((UserDetailsImpl) authResult.getPrincipal()).getUsername();
             UserRoleEnum role = ((UserDetailsImpl) authResult.getPrincipal()).getUser().getRole();
+            Long userId = ((UserDetailsImpl) authResult.getPrincipal()).getUser().getId();
 
-            String token = jwtUtil.createToken(username, role);
-            // Jwt 쿠키 저장
-            jwtUtil.addJwtToCookie(token, response);
-            // JWT header 저장
-//            response.addHeader(JwtUtil.AUTHORIZATION_HEADER, token);
-//            response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
-//            response.setHeader("Access-Control-Allow-Origin", "http://13.125.15.196:8080/");
-//            response.setHeader("Access-Control-Allow-Methods", "POST");
-//            response.setHeader("Access-Control-Allow-Methods", "GET");
-//            response.setHeader("Access-Control-Allow-Methods", "OPTIONS");
-//            response.setHeader("Access-Control-Allow-Methods", "PUT");
-//            response.setHeader("Access-Control-Allow-Methods", "DELETE");
-//            response.setHeader("Access-Control-Max-Age", "3600");
-//            response.setHeader("Access-Control-Allow-Headers", "x-requested-with, origin, content-type, accept");
+
+            String accessToken = jwtUtil.createAccessToken(username, role);
+            response.addHeader(JwtUtil.ACCESS_TOKEN, accessToken);
+
+            // redis userid값으로 조회후 동일한 값이 존재한다면 중복로그인은 불가능하다로 에러처리
+            String refreshToken = jwtUtil.createRefreshToken(username);
+            response.addHeader(JwtUtil.REFRESH_TOKEN, refreshToken);
+            // redis에 저장
+            redisService.setRefreshToken(new RefreshToken(refreshToken, userId));
 
             response.setStatus(200);
             response.setContentType("application/json;charset=UTF-8");
-//            response.setCharacterEncoding("UTF-8");
-//        new ObjectMapper().writeValue(response.getOutputStream(), "로그인 성공");
-
             new ObjectMapper().writeValue(response.getOutputStream(), new ResultResponseDto("로그인 성공"));
-//            String json = new ObjectMapper().writeValueAsString(new ResultResponseDto("로그인 성공"));
-//            response.getWriter().write(json);
-//        } else {
-//            response.setStatus(200);
-//            new ObjectMapper().writeValue(response.getOutputStream(), new ResultResponseDto("로그인 상태입니다."));
-////            String json = new ObjectMapper().writeValueAsString(new ResultResponseDto("로그인 상태입니다."));
-////            response.getWriter().write(json);
-//        }
+        }
+        else{
+            new ObjectMapper().writeValue(response.getOutputStream(), new ResultResponseDto("로그인 실패"));
+        }
+//             // Jwt 쿠키 저장
+//             jwtUtil.addJwtToCookie(token, response);
+
     }
 
     @Override
@@ -96,10 +84,7 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
         log.info("unsuccessfulAuthentication");
         response.setStatus(400);
         response.setContentType("application/json;charset=UTF-8");
-//        response.setCharacterEncoding("UTF-8");
-//        String json = new ObjectMapper().writeValueAsString(new ResultResponseDto("로그인 실패"));
-//        response.getWriter().write(json);
-        new ObjectMapper().writeValue(response.getOutputStream(), new ResultResponseDto("로그인 실패"));
-    }
+        new ObjectMapper().writeValue(response.getOutputStream(), new ResultResponseDto("아이디와 비밀번호를 한번 더 확인해 주세요"));
 
+    }
 }
