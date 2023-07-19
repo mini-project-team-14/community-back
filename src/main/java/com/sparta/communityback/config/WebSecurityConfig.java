@@ -1,11 +1,11 @@
 package com.sparta.communityback.config;
 
-
 import com.sparta.communityback.jwt.JwtUtil;
 import com.sparta.communityback.security.AuthExceptionFilter;
 import com.sparta.communityback.security.JwtAuthenticationFilter;
 import com.sparta.communityback.security.JwtAuthorizationFilter;
 import com.sparta.communityback.security.UserDetailsServiceImpl;
+import com.sparta.communityback.service.RedisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
@@ -37,6 +37,7 @@ public class WebSecurityConfig implements WebMvcConfigurer {
     private final CorsConfig corsConfig;
     private final UserDetailsServiceImpl userDetailsService;
     private final AuthenticationConfiguration authenticationConfiguration;
+    private final RedisService redisService;
     private final static String LOGIN_URL = "/api/user/login";
 
     @Bean
@@ -67,7 +68,8 @@ public class WebSecurityConfig implements WebMvcConfigurer {
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() throws Exception {
-        JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtUtil);
+        JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtUtil, redisService);
+        filter.setFilterProcessesUrl(LOGIN_URL);
         filter.setAuthenticationManager(authenticationManager(authenticationConfiguration));
         return filter;
     }
@@ -76,8 +78,8 @@ public class WebSecurityConfig implements WebMvcConfigurer {
     public WebSecurityCustomizer webSecurityCustomizer() {
         return web -> {
             web.ignoring()
-                    .requestMatchers("/api/user/**")
-                    .requestMatchers(HttpMethod.GET, "/api/boards/**");
+                    .requestMatchers("/api/user/**");
+//                    .requestMatchers(HttpMethod.GET, "/api/boards/**");
         };
     }
 
@@ -103,13 +105,12 @@ public class WebSecurityConfig implements WebMvcConfigurer {
 //                formLogin
 //                        .loginPage(LOGIN_URL).permitAll()
 //        );
+
         http.cors(Customizer.withDefaults());
 //        // corsConfig setting -------------------------------
 //        http.addFilterBefore(corsConfig.corsFilter(), JwtAuthenticationFilter.class); // SPRING 3.0
 
         // 필터 관리
-
-
 //        http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 //        http.addFilterBefore(jwtAuthorizationFilter(), JwtAuthenticationFilter.class);
 //        http.addFilterBefore(authExceptionFilter(), JwtAuthorizationFilter.class);

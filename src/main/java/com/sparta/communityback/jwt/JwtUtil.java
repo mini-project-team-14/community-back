@@ -1,12 +1,16 @@
 package com.sparta.communityback.jwt;
 
+import com.sparta.communityback.entity.User;
 import com.sparta.communityback.entity.UserRoleEnum;
+import com.sparta.communityback.repository.UserRepository;
+import com.sparta.communityback.service.RedisService;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,23 +24,33 @@ import java.net.URLDecoder;
 import java.security.Key;
 import java.util.Base64;
 import java.util.Date;
+import java.util.Optional;
 
 @Slf4j(topic = "JwtUtil")
 @Component
+@RequiredArgsConstructor
 public class JwtUtil {
     // Header KEY 값
-    public static final String AUTHORIZATION_HEADER = "Authorization";
+    public static final String ACCESS_TOKEN = "AccessToken";
+    public static final String REFRESH_TOKEN = "RefreshToken";
     // 사용자 권한 값의 KEY
     public static final String AUTHORIZATION_KEY = "auth";
     // Token 식별자
     public static final String BEARER_PREFIX = "Bearer ";
-    // 토큰 만료시간
-    private final long TOKEN_TIME = 60 * 60 * 1000L; // 60분
+
+    // accessToken 만료시간
+    private final long TOKEN_TIME = 60 * 60 * 1000L; // 한시간
+//    private final long TOKEN_TIME = 60 * 1000L; // 1분
+
+    // refreshToken 만료시간
+    private final long REFRESH_TOKEN_TIME = 14 * 24 * 60 * 60 * 1000L; //2주
 
     @Value("${jwt.secret.key}") // Base64 Encode 한 SecretKey
     private String secretKey;
     private Key key;
     private final SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
+    private final RedisService redisService;
+    private final UserRepository userRepository;
 
     // 로그 설정
     public static final Logger logger = LoggerFactory.getLogger("JWT 관련 로그");
@@ -47,8 +61,7 @@ public class JwtUtil {
         key = Keys.hmacShaKeyFor(bytes);
     }
 
-    // 토큰 생성
-    public String createToken(String username, String nickname, UserRoleEnum role) {
+    public String createAccessToken(String username, String nickname, UserRoleEnum role) {
         Date date = new Date();
 
         return BEARER_PREFIX +
@@ -62,16 +75,29 @@ public class JwtUtil {
                         .compact();
     }
 
+
+    public String createRefreshToken(String username){
+        Date now = new Date();
+
+        return BEARER_PREFIX +
+            Jwts.builder()
+                .setSubject(username) // 사용자 식별자값(ID)
+                .setExpiration(new Date(now.getTime() + REFRESH_TOKEN_TIME)) // 만료 시간
+                .setIssuedAt(now) // 발급일
+                .signWith(key, signatureAlgorithm) // 암호화 알고리즘
+                .compact();
+    }
+
     // JWT Cookie 에 저장
-    public void addJwtToCookie(String token, HttpServletResponse res) {
+    public void addJwtToCookie(String token, HttpServletResponse res, String tokenHeader) {
         try {
             token = URLEncoder.encode(token, "utf-8").replaceAll("\\+", "%20"); // Cookie Value 에는 공백이 불가능해서 encoding 진행
 
-            Cookie cookie = new Cookie(AUTHORIZATION_HEADER, token); // Name-Value
+            Cookie cookie = new Cookie(tokenHeader, token); // Name-Value
             cookie.setMaxAge(60 * 60); // 60초 60분 1시간
             cookie.setPath("/");
             // ResponseHeader에 token 추가
-            res.addHeader(AUTHORIZATION_HEADER, token);
+//            res.addHeader(tokenHeader, token);
             // Response 객체에 Cookie 추가
             res.addCookie(cookie);
         } catch (UnsupportedEncodingException e) {
@@ -81,28 +107,56 @@ public class JwtUtil {
 
     // header 에서 JWT 가져오기
     public String getJwtFromHeader(HttpServletRequest request) {
-        String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
-        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PREFIX)) {
-            return bearerToken.substring(7);
+        String accessToken = request.getHeader(ACCESS_TOKEN);
+        if (StringUtils.hasText(accessToken) && accessToken.startsWith(BEARER_PREFIX)) {
+            return accessToken.substring(7);
         }
         return null;
     }
 
     // 토큰 검증
-    public boolean validateToken(String token) {
+    public boolean validateToken(String token, HttpServletRequest req, HttpServletResponse res) {
         try {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
             return true;
         } catch (SecurityException | MalformedJwtException | SignatureException e) {
             log.error("Invalid JWT signature, 유효하지 않는 JWT 서명 입니다.");
-        } catch (ExpiredJwtException e) {
-            log.error("Expired JWT token, 만료된 JWT token 입니다.");
+            throw new IllegalArgumentException("Invalid JWT signature, 유효하지 않는 JWT 서명 입니다.");
+        } catch (ExpiredJwtException | IllegalArgumentException e) {
+            if(req.getHeader(REFRESH_TOKEN).isEmpty()) {
+                log.error("Expired JWT token, 만료된 JWT token 입니다.");
+                throw new RuntimeException("Expired JWT token, 만료된 JWT token 입니다.");
+            } else {
+                String RefreshToken = req.getHeader(REFRESH_TOKEN);
+                String newAccessToken = regenerateAccessToken(RefreshToken);
+                res.addHeader(JwtUtil.ACCESS_TOKEN, newAccessToken);
+                res.addHeader(JwtUtil.REFRESH_TOKEN, RefreshToken);
+                log.info("토큰재발급 성공: {}", newAccessToken);
+            }
         } catch (UnsupportedJwtException e) {
             log.error("Unsupported JWT token, 지원되지 않는 JWT 토큰 입니다.");
-        } catch (IllegalArgumentException e) {
-            log.error("JWT claims is empty, 잘못된 JWT 토큰 입니다.");
+            throw new UnsupportedJwtException("Unsupported JWT token, 지원되지 않는 JWT 토큰 입니다.");
         }
         return false;
+    }
+
+    public String regenerateAccessToken(String refreshToken) {
+        // redis에 토큰이 남아있는지 검증
+        String redisRefreshToken = findRefreshToken(refreshToken);
+        // 토큰 재발급 과정
+        Optional<User> userOptional = userRepository.findById(Long.valueOf(redisRefreshToken));
+        String username = userOptional.get().getUsername();
+        String nickname = userOptional.get().getNickname();
+        UserRoleEnum userRole = userOptional.get().getRole();
+        return createAccessToken(username, nickname, userRole);
+
+    }
+    public String findRefreshToken(String refreshToken) {
+        String redisRefreshToken = redisService.getRefreshToken(refreshToken);
+        if(redisRefreshToken == null){
+            throw new RuntimeException("저장되지 않은 RefreshToken 입니다.");
+        }
+        return redisRefreshToken;
     }
 
     // 토큰에서 사용자 정보 가져오기
@@ -111,40 +165,40 @@ public class JwtUtil {
     }
 
     // HttpServletRequest 에서 Cookie Value : JWT 가져오기
-    public String getTokenFromRequest(HttpServletRequest req) {
-        //쿠키의 경우 모든 쿠기에서 필요로 하는 값을 찾아서
-        Cookie[] cookies = req.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if (cookie.getName().equals(AUTHORIZATION_HEADER)) {
-                    try {
-                        System.out.println(URLDecoder.decode(cookie.getValue(), "UTF-8"));
-                        return URLDecoder.decode(cookie.getValue(), "UTF-8"); // Encode 되어 넘어간 Value(공백 인코딩) 다시 Decode
-                    } catch (UnsupportedEncodingException e) {
-                        return null;
-                    }
-                }
-            }
-        }
-        // 쿠키 없는 경우 헤더에서 값 가져오기
-//        String header = null;
-        String header = req.getHeader(AUTHORIZATION_HEADER);
-        if (header != null) {
-            try {
-                return URLDecoder.decode(header, "UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                throw null;
-            }
-        }
-//        return null;
-        throw new NullPointerException("토큰이 존재하지 않습니다. 로그인 해주세요.");
-    }
-
-    public String substringToken(String tokenValue) {
-        if (StringUtils.hasText(tokenValue) && tokenValue.startsWith(BEARER_PREFIX)) {
-            return tokenValue.substring(7);
-        }
-        logger.error("Not Found Token");
-        throw new NullPointerException("토큰이 존재하지 않습니다. 로그인 해주세요.");
-    }
+//    public String getTokenFromRequest(HttpServletRequest req) {
+//        //쿠키의 경우 모든 쿠기에서 필요로 하는 값을 찾아서
+//        Cookie[] cookies = req.getCookies();
+//        if (cookies != null) {
+//            for (Cookie cookie : cookies) {
+//                if (cookie.getName().equals(AUTHORIZATION_HEADER)) {
+//                    try {
+//                        System.out.println(URLDecoder.decode(cookie.getValue(), "UTF-8"));
+//                        return URLDecoder.decode(cookie.getValue(), "UTF-8"); // Encode 되어 넘어간 Value(공백 인코딩) 다시 Decode
+//                    } catch (UnsupportedEncodingException e) {
+//                        return null;
+//                    }
+//                }
+//            }
+//        }
+//        // 쿠키 없는 경우 헤더에서 값 가져오기
+////        String header = null;
+//        String header = req.getHeader(AUTHORIZATION_HEADER);
+//        if (header != null) {
+//            try {
+//                return URLDecoder.decode(header, "UTF-8");
+//            } catch (UnsupportedEncodingException e) {
+//                throw null;
+//            }
+//        }
+////        return null;
+//        throw new NullPointerException("토큰이 존재하지 않습니다. 로그인 해주세요.");
+//    }
+//
+//    public String substringToken(String tokenValue) {
+//        if (StringUtils.hasText(tokenValue) && tokenValue.startsWith(BEARER_PREFIX)) {
+//            return tokenValue.substring(7);
+//        }
+//        logger.error("Not Found Token");
+//        throw new NullPointerException("토큰이 존재하지 않습니다. 로그인 해주세요.");
+//    }
 }

@@ -2,12 +2,16 @@ package com.sparta.communityback.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sparta.communityback.dto.LoginRequestDto;
+import com.sparta.communityback.entity.RefreshToken;
 import com.sparta.communityback.dto.StatusResponseDto;
+import com.sparta.communityback.entity.User;
 import com.sparta.communityback.entity.UserRoleEnum;
 import com.sparta.communityback.jwt.JwtUtil;
+import com.sparta.communityback.service.RedisService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -18,13 +22,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import java.io.IOException;
 
 @Slf4j(topic = "로그인 및 JWT 생성")
+@RequiredArgsConstructor
 public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
     private final JwtUtil jwtUtil;
-
-    public JwtAuthenticationFilter(JwtUtil jwtUtil) {
-        this.jwtUtil = jwtUtil;
-        setFilterProcessesUrl("/api/user/login");
-    }
+    private final RedisService redisService;
 
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
@@ -32,37 +33,46 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
         try {
             LoginRequestDto requestDto = new ObjectMapper().readValue(request.getInputStream(), LoginRequestDto.class);
 
-
             UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
                     requestDto.getUsername(),
                     requestDto.getPassword()
             );
-
-
             return getAuthenticationManager().authenticate(usernamePasswordAuthenticationToken);
         } catch (IOException e) {
             log.error(e.getMessage());
-            throw new AuthenticationException(e.getMessage()) {
-            };
+            throw new RuntimeException(e.getMessage());
         }
     }
 
     @Override
     protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException {
         log.info("successfulAuthentication");
-        String username = ((UserDetailsImpl) authResult.getPrincipal()).getUsername();
-        String nickname = ((UserDetailsImpl) authResult.getPrincipal()).getNickname();
-        UserRoleEnum role = ((UserDetailsImpl) authResult.getPrincipal()).getUser().getRole();
+        User user = ((UserDetailsImpl) authResult.getPrincipal()).getUser();
+        String username = user.getUsername();
+        String nickname = user.getNickname();
+        UserRoleEnum role = user.getRole();
+        Long userId = ((UserDetailsImpl) authResult.getPrincipal()).getUser().getUserId();
 
-        String token = jwtUtil.createToken(username, nickname, role);
-        // Jwt 쿠키 저장
-        jwtUtil.addJwtToCookie(token, response);
+        String accessToken = jwtUtil.createAccessToken(username, nickname, role);
+        response.addHeader(JwtUtil.ACCESS_TOKEN, accessToken);
+
+        // redis userid값으로 조회후 동일한 값이 존재한다면 중복로그인은 불가능하다로 에러처리
+        String refreshToken = redisService.getRefreshToken(userId);
+        if (refreshToken != null) {
+            response.addHeader(JwtUtil.REFRESH_TOKEN, refreshToken);
+        } else {
+            String newRefreshToken = jwtUtil.createRefreshToken(username);
+            response.addHeader(JwtUtil.REFRESH_TOKEN, newRefreshToken);
+            // redis에 저장
+            redisService.setRefreshToken(new RefreshToken(newRefreshToken, userId));
+        }
+
         response.setStatus(200);
         response.setContentType("application/json;charset=UTF-8");
-
         new ObjectMapper().writeValue(response.getOutputStream(),
                 new StatusResponseDto(HttpStatus.OK.value(), "로그인 성공")
         );
+
     }
 
     @Override

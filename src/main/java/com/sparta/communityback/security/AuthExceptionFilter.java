@@ -28,18 +28,13 @@ public class AuthExceptionFilter extends OncePerRequestFilter {
             log.error(e.getMessage());
             response.setStatus(HttpStatus.BAD_REQUEST.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            response.setCharacterEncoding("UTF-8");
+            response.setContentType("application/json;charset=UTF-8");
             // response body에 넣을 json 형태의 값
             StatusResponseDto statusCodesResponseDto = new StatusResponseDto(
                     HttpStatus.BAD_REQUEST.value(),
-                    e.getMessage());
+                    "로그인이 필요합니다.");
 
-            String json = new ObjectMapper().writeValueAsString(statusCodesResponseDto);
-
-            response.getWriter().write(json);
-//            response.setStatus(HttpStatus.BAD_REQUEST.value());
-//            response.setContentType("application/json;charset=UTF-8");
-//            new ObjectMapper().writeValue(response.getOutputStream(), statusCodesResponseDto);
+            new ObjectMapper().writeValue(response.getOutputStream(), statusCodesResponseDto);
         }
     }
 }
