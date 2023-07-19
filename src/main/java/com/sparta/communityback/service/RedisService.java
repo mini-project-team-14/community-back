@@ -31,6 +31,7 @@ public class RedisService {
     public String getRefreshToken(Long userId) {
         ValueOperations<String, String> values = redisTemplate.opsForValue();
 
+
 // Redis에서 key를 찾기 위해 모든 키를 순회합니다.
         Set<String> keys = redisTemplate.keys("*");
         for (String key : keys) {
@@ -39,9 +40,7 @@ public class RedisService {
                 return key; // userId와 일치하는 value를 가진 key를 반환합니다.
             }
         }
-
 // 일치하는 userId가 없을 경우 null을 반환합니다.
         return null;
     }
-
 }
