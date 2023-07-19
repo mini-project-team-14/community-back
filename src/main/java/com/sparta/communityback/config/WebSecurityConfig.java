@@ -1,7 +1,6 @@
 package com.sparta.communityback.config;
 
 import com.sparta.communityback.jwt.JwtUtil;
-import com.sparta.communityback.security.CorsFilter;
 import com.sparta.communityback.security.JwtAuthenticationFilter;
 import com.sparta.communityback.security.JwtAuthorizationFilter;
 import com.sparta.communityback.security.UserDetailsServiceImpl;
@@ -45,6 +44,7 @@ public class WebSecurityConfig {
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() throws Exception {
         JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtUtil, redisService);
+        filter.setFilterProcessesUrl(LOGIN_URL);
         filter.setAuthenticationManager(authenticationManager(authenticationConfiguration));
         return filter;
     }
@@ -72,15 +72,15 @@ public class WebSecurityConfig {
                         .anyRequest().authenticated() // 그 외 모든 요청 인증처리
         );
 
-        http.formLogin((formLogin) ->
-                formLogin
-                        .loginPage(LOGIN_URL).permitAll()
-        );
+//        http.formLogin((formLogin) ->
+//                formLogin
+//                        .loginPage(LOGIN_URL).permitAll()
+//        );
 
         // 필터 관리
-            http.addFilterBefore(new CorsFilter(), JwtAuthenticationFilter.class);
-            http.addFilterBefore(jwtAuthorizationFilter(), JwtAuthenticationFilter.class);
-            http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+            http
+                    .addFilterBefore(jwtAuthorizationFilter(), JwtAuthenticationFilter.class)
+                    .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

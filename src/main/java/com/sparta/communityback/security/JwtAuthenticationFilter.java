@@ -10,6 +10,7 @@ import com.sparta.communityback.service.RedisService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -19,18 +20,16 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import java.io.IOException;
 
 @Slf4j(topic = "로그인 및 JWT 생성")
+@RequiredArgsConstructor
 public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
     private final JwtUtil jwtUtil;
     private final RedisService redisService;
 
-    public JwtAuthenticationFilter(JwtUtil jwtUtil, RedisService redisService) {
-        this.jwtUtil = jwtUtil;
-        this.redisService = redisService;
-        setFilterProcessesUrl("/api/user/login");
-    }
-
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
+        log.info("request uri: {}", request.getRequestURI());
+
+
         try {
             LoginRequestDto requestDto = new ObjectMapper().readValue(request.getInputStream(), LoginRequestDto.class);
 
@@ -47,18 +46,26 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
 
     @Override
     public void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException {
+        if(request.getHeader("AccessToken") == null && request.getHeader("RefreshToken") == null) {
             String username = ((UserDetailsImpl) authResult.getPrincipal()).getUsername();
             UserRoleEnum role = ((UserDetailsImpl) authResult.getPrincipal()).getUser().getRole();
-            Long userId=((UserDetailsImpl) authResult.getPrincipal()).getUser().getId();
+            Long userId = ((UserDetailsImpl) authResult.getPrincipal()).getUser().getId();
 
             String accessToken = jwtUtil.createAccessToken(username, role);
-            response.addHeader(JwtUtil.AUTHORIZATION_HEADER, accessToken);
+            response.addHeader(JwtUtil.ACCESS_TOKEN, accessToken);
 
+            // redis userid값으로 조회후 동일한 값이 존재한다면 중복로그인은 불가능하다로 에러처리
             String refreshToken = jwtUtil.createRefreshToken(username);
+            response.addHeader(JwtUtil.REFRESH_TOKEN, refreshToken);
+            // redis에 저장
             redisService.setRefreshToken(new RefreshToken(refreshToken, userId));
 
             response.setStatus(200);
             new ObjectMapper().writeValue(response.getOutputStream(), new ResultResponseDto("로그인 성공"));
+        }
+        else{
+            new ObjectMapper().writeValue(response.getOutputStream(), new ResultResponseDto("로그인 성공"));
+        }
     }
 
     @Override
