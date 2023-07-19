@@ -45,8 +45,8 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
     }
 
     @Override
-    public void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException {
-
+    protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException {
+        log.info("successfulAuthentication");
         String username = ((UserDetailsImpl) authResult.getPrincipal()).getUsername();
         UserRoleEnum role = ((UserDetailsImpl) authResult.getPrincipal()).getUser().getRole();
         Long userId = ((UserDetailsImpl) authResult.getPrincipal()).getUser().getUserId();
@@ -55,15 +55,20 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
         response.addHeader(JwtUtil.ACCESS_TOKEN, accessToken);
 
         // redis userid값으로 조회후 동일한 값이 존재한다면 중복로그인은 불가능하다로 에러처리
-        String refreshToken = jwtUtil.createRefreshToken(username);
-        response.addHeader(JwtUtil.REFRESH_TOKEN, refreshToken);
-        // redis에 저장
-        if(redisService.getRefreshToken(userId) == null) {
-            redisService.setRefreshToken(new RefreshToken(refreshToken, userId));
+        String refreshToken = redisService.getRefreshToken(userId);
+        if (refreshToken != null) {
+            response.addHeader(JwtUtil.REFRESH_TOKEN, refreshToken);
+        } else {
+            String newRefreshToken = jwtUtil.createRefreshToken(username);
+            response.addHeader(JwtUtil.REFRESH_TOKEN, newRefreshToken);
+            // redis에 저장
+            redisService.setRefreshToken(new RefreshToken(newRefreshToken, userId));
         }
 
         response.setStatus(200);
+        response.setContentType("application/json;charset=UTF-8");
         new ObjectMapper().writeValue(response.getOutputStream(), new ResultResponseDto("로그인 성공"));
+
     }
 
     @Override
