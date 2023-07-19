@@ -2,8 +2,9 @@ package com.sparta.communityback.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sparta.communityback.dto.LoginRequestDto;
-import com.sparta.communityback.dto.ResultResponseDto;
 import com.sparta.communityback.entity.RefreshToken;
+import com.sparta.communityback.dto.StatusResponseDto;
+import com.sparta.communityback.entity.User;
 import com.sparta.communityback.entity.UserRoleEnum;
 import com.sparta.communityback.jwt.JwtUtil;
 import com.sparta.communityback.service.RedisService;
@@ -12,6 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -27,9 +29,7 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
 
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
-        log.info("request uri: {}", request.getRequestURI());
-
-
+        log.info("attemptAuthentication");
         try {
             LoginRequestDto requestDto = new ObjectMapper().readValue(request.getInputStream(), LoginRequestDto.class);
 
@@ -47,11 +47,13 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
     @Override
     protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException {
         log.info("successfulAuthentication");
-        String username = ((UserDetailsImpl) authResult.getPrincipal()).getUsername();
-        UserRoleEnum role = ((UserDetailsImpl) authResult.getPrincipal()).getUser().getRole();
+        User user = ((UserDetailsImpl) authResult.getPrincipal()).getUser();
+        String username = user.getUsername();
+        String nickname = user.getNickname();
+        UserRoleEnum role = user.getRole();
         Long userId = ((UserDetailsImpl) authResult.getPrincipal()).getUser().getUserId();
 
-        String accessToken = jwtUtil.createAccessToken(username, role);
+        String accessToken = jwtUtil.createAccessToken(username, nickname, role);
         response.addHeader(JwtUtil.ACCESS_TOKEN, accessToken);
 
         // redis userid값으로 조회후 동일한 값이 존재한다면 중복로그인은 불가능하다로 에러처리
@@ -67,13 +69,20 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
 
         response.setStatus(200);
         response.setContentType("application/json;charset=UTF-8");
-        new ObjectMapper().writeValue(response.getOutputStream(), new ResultResponseDto("로그인 성공"));
+        new ObjectMapper().writeValue(response.getOutputStream(),
+                new StatusResponseDto(HttpStatus.OK.value(), "로그인 성공")
+        );
 
     }
 
     @Override
     protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, AuthenticationException failed) throws IOException {
+        log.info("unsuccessfulAuthentication");
         response.setStatus(400);
-        new ObjectMapper().writeValue(response.getOutputStream(), new ResultResponseDto("아이디와 비밀번호를 한번 더 확인해 주세요"));
+        response.setContentType("application/json;charset=UTF-8");
+        new ObjectMapper().writeValue(response.getOutputStream(),
+                new StatusResponseDto(HttpStatus.BAD_REQUEST.value(), "로그인 실패")
+        );
     }
+
 }

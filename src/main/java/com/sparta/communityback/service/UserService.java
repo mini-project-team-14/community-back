@@ -1,15 +1,14 @@
 package com.sparta.communityback.service;
 
-import com.sparta.communityback.dto.*;
+import com.sparta.communityback.dto.SignupRequestDto;
+import com.sparta.communityback.dto.StatusResponseDto;
+import com.sparta.communityback.dto.UsernameRequestDto;
 import com.sparta.communityback.entity.User;
 import com.sparta.communityback.entity.UserRoleEnum;
-import com.sparta.communityback.jwt.JwtUtil;
 import com.sparta.communityback.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +20,6 @@ import java.util.Optional;
 public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtUtil jwtUtil;
 
     @Value("${adimin.token}") // Base64 Encode 한 SecretKey
     private String ADMIN_TOKEN;

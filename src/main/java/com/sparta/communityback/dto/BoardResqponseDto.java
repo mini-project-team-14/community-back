@@ -1,7 +1,6 @@
 package com.sparta.communityback.dto;
 
 import com.sparta.communityback.entity.Board;
-import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 
 @Getter

@@ -10,6 +10,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,7 @@ import java.util.Optional;
 
 @Slf4j(topic = "JwtUtil")
 @Component
+@RequiredArgsConstructor
 public class JwtUtil {
     // Header KEY 값
     public static final String ACCESS_TOKEN = "AccessToken";
@@ -49,10 +51,6 @@ public class JwtUtil {
     private final SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
     private final RedisService redisService;
     private final UserRepository userRepository;
-    public JwtUtil(RedisService redisService, UserRepository userRepository) {
-        this.redisService = redisService;
-        this.userRepository = userRepository;
-    }
 
     // 로그 설정
     public static final Logger logger = LoggerFactory.getLogger("JWT 관련 로그");
@@ -63,12 +61,13 @@ public class JwtUtil {
         key = Keys.hmacShaKeyFor(bytes);
     }
 
-    public String createAccessToken(String username, UserRoleEnum role) {
+    public String createAccessToken(String username, String nickname, UserRoleEnum role) {
         Date date = new Date();
 
         return BEARER_PREFIX +
                 Jwts.builder()
                         .setSubject(username) // 사용자 식별자값(ID)
+                        .setAudience(nickname)
                         .claim(AUTHORIZATION_KEY, role) // 사용자 권한
                         .setExpiration(new Date(date.getTime() + TOKEN_TIME)) // 만료 시간
                         .setIssuedAt(date) // 발급일
@@ -88,7 +87,7 @@ public class JwtUtil {
                 .signWith(key, signatureAlgorithm) // 암호화 알고리즘
                 .compact();
     }
-  
+
     // JWT Cookie 에 저장
     public void addJwtToCookie(String token, HttpServletResponse res, String tokenHeader) {
         try {
@@ -119,7 +118,6 @@ public class JwtUtil {
     public boolean validateToken(String token, HttpServletRequest req, HttpServletResponse res) {
         try {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
-
             return true;
         } catch (SecurityException | MalformedJwtException | SignatureException e) {
             log.error("Invalid JWT signature, 유효하지 않는 JWT 서명 입니다.");
@@ -148,8 +146,9 @@ public class JwtUtil {
         // 토큰 재발급 과정
         Optional<User> userOptional = userRepository.findById(Long.valueOf(redisRefreshToken));
         String username = userOptional.get().getUsername();
+        String nickname = userOptional.get().getNickname();
         UserRoleEnum userRole = userOptional.get().getRole();
-        return createAccessToken(username, userRole);
+        return createAccessToken(username, nickname, userRole);
 
     }
     public String findRefreshToken(String refreshToken) {

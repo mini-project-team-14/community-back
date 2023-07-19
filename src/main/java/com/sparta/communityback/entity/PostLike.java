@@ -3,11 +3,9 @@ package com.sparta.communityback.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
 @Getter
-@Setter
 @Table(name = "post_like") // 수정 필요
 @NoArgsConstructor
 public class PostLike {
@@ -16,9 +14,11 @@ public class PostLike {
     private Long postLikeId;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "post_id")
     private Post post;
 
     public PostLike(User user, Post post) {

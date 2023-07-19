@@ -34,11 +34,11 @@ public class User {
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     private List<Post> Post = new ArrayList<>();
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
-    private  List<Comment> comments = new ArrayList<>();
+    private List<Comment> comments = new ArrayList<>();
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     private List<PostLike> postLikes = new ArrayList<>();
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
-    private  List<CommentLike> commentLikes = new ArrayList<>();
+    private List<CommentLike> commentLikes = new ArrayList<>();
 
 
     public User(String username, String password, String nickname, UserRoleEnum role) {
@@ -48,7 +48,7 @@ public class User {
         this.role = role;
     }
 
-    public User(User user){
+    public User(User user) {
         this.username = user.getUsername();
         this.password = user.getPassword();
         this.nickname = user.getNickname();

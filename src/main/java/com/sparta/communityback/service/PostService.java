@@ -7,12 +7,8 @@ import com.sparta.communityback.entity.Board;
 import com.sparta.communityback.entity.Post;
 import com.sparta.communityback.entity.PostLike;
 import com.sparta.communityback.entity.User;
-import com.sparta.communityback.jwt.JwtUtil;
-import com.sparta.communityback.repository.BoardReqpository;
 import com.sparta.communityback.repository.PostLikeRepository;
 import com.sparta.communityback.repository.PostRepository;
-import com.sparta.communityback.repository.UserRepository;
-import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AuthorizationServiceException;
@@ -26,11 +22,8 @@ import java.util.List;
 public class PostService {
 
     private final PostRepository postRepository;
-    private final UserRepository userRepository;
-    private final BoardReqpository boardReqpository;
     private final PostLikeRepository postLikeRepository;
     private final BoardService boardService;
-    private final JwtUtil jwtUtil;
 
     //<전체 조회하기>
     public List<PostResponseDto> findAll(Long boardId) {
@@ -46,23 +39,23 @@ public class PostService {
     public PostResponseDto createPost(PostRequestDto requestDto, Long boardId, User user) {
         Board board = boardService.findBoard(boardId);
         Post post = new Post(requestDto, board, user);
-//        post.connectUser(user);
         Post savePost = postRepository.save(post);
         return new PostResponseDto(savePost);
     }
 
     //<상세 조회하기>
-    public PostResponseDto getSelectedPost(Long id) {
+    public PostResponseDto getSelectedPost(Long boardId, Long postId) {
         // 해당 게시글이 DB에 존재하는지 확인
-        Post post = findPost(id);
+        Post post = findPost(boardId, postId);
         // Entity -> ResponseDto
         return new PostResponseDto(post);
     }
+
     //<게시글 수정하기>
     @Transactional
-    public PostResponseDto updatePost(Long id, PostRequestDto requestDto, User user) {
+    public PostResponseDto updatePost(Long boardId, Long postId, PostRequestDto requestDto, User user) {
         // 해당 메모가 DB에 존재하는지 확인
-        Post post = findPost(id);
+        Post post = findPost(boardId, postId);
         // 권한 확인
         checkAuthority(post, user);
         // 수정
@@ -72,21 +65,20 @@ public class PostService {
     }
 
     //<삭제하기>
-    public StatusResponseDto deletePost(Long id, User user) {
+    public StatusResponseDto deletePost(Long boardId, Long postId, User user) {
         // 해당 메모가 DB에 존재하는지 확인
-        Post post = findPost(id);
+        Post post = findPost(boardId, postId);
         // 권한 확인
         checkAuthority(post, user);
         // 삭제
         postRepository.delete(post);
-
         return new StatusResponseDto(HttpStatus.OK.value(), "삭제가 완료 되었습니다.");
 
     }
 
     //<게시글 좋아요 추가>
-    public StatusResponseDto postLike(Long postId, User user) {
-        Post post = findPost(postId);
+    public StatusResponseDto postLike(Long boardId, Long postId, User user) {
+        Post post = findPost(boardId, postId);
         PostLike checkPostLike = postLikeRepository.findByPostAndUser(post, user).orElse(null);
         if (checkPostLike == null) {
             PostLike postLike = new PostLike(user, post);
@@ -98,17 +90,15 @@ public class PostService {
         }
     }
 
-    protected Post findPost(Long id) {
-        return postRepository.findById(id).orElseThrow(() ->
-                new NullPointerException("존재하지 않는 게시물 입니다.")
-        );
+    protected Post findPost(Long boardId, Long postId) {
+        return postRepository.findByBoardBoardIdAndPostId(boardId, postId).orElseThrow(() ->
+                new NullPointerException("존재하지 않는 게시물 입니다."));
     }
 
     public void checkAuthority(Post post, User user) {
         // admin 확인
         if (!user.getRole().getAuthority().equals("ROLE_ADMIN")) {
-            // username만 확인하는 것 보다 이쪽이 더 안전하다고 생각하여 작성하였으나 true가 나오지 않음.
-//            if (!post.getUser().equals(user)) {
+            // userId 확인
             if (post.getUser().getUserId() != user.getUserId()) {
                 throw new AuthorizationServiceException("작성자만 삭제/수정할 수 있습니다.");
             }
