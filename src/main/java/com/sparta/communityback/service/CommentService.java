@@ -23,9 +23,9 @@ public class CommentService {
     private final CommentLikeRepository commentLikeRepository;
     private final PostService PostService;
 
-    public CommentResponseDto createComment(Long PostId, CommentRequestDto requestDto, User user) {
+    public CommentResponseDto createComment(Long boardId, Long postId, CommentRequestDto requestDto, User user) {
         // 해당 게시글이 DB에 존재하는지 확인
-        Post targetPost = PostService.findPost(PostId);
+        Post targetPost = PostService.findPost(boardId, postId);
         // requestDto를 포함한 comment 저장에 필요한 값들 담아서 주기
         Comment comment = new Comment(requestDto, targetPost, user);
         // DB 저장 넘겨주기
@@ -35,9 +35,9 @@ public class CommentService {
     }
 
     @Transactional
-    public CommentResponseDto updateComment(Long commentId, CommentRequestDto requestDto, User user) {
-        // 댓글 저장유무 확인
-        Comment comment = findComment(commentId);
+    public CommentResponseDto updateComment(Long boardId, Long postId, Long commentId, CommentRequestDto requestDto, User user) {
+        // 댓글 유무 확인
+        Comment comment = findComment(boardId, postId, commentId);
         // 권한 확인
         checkAuthority(comment, user);
         // 수정
@@ -46,9 +46,9 @@ public class CommentService {
         return new CommentResponseDto(comment);
     }
 
-    public StatusResponseDto deleteComment(Long commentId, User user) {
-        // 댓글 저장유무 확인
-        Comment comment = findComment(commentId);
+    public StatusResponseDto deleteComment(Long boardId, Long postId, Long commentId, User user) {
+        // 댓글 유무 확인
+        Comment comment = findComment(boardId, postId, commentId);
         // 권한 확인
         checkAuthority(comment, user);
         // 삭제
@@ -58,8 +58,9 @@ public class CommentService {
 
     }
 
-    public StatusResponseDto commentLike(Long commentId, User user) {
-        Comment comment = findComment(commentId);
+    public StatusResponseDto commentLike(Long boardId, Long postId, Long commentId, User user) {
+        // 댓글 유무 확인
+        Comment comment = findComment(boardId, postId, commentId);
         CommentLike checkCommentLike = commentLikeRepository.findByCommentAndUser(comment, user)
                 .orElse(null);
         if (checkCommentLike == null) {
@@ -74,8 +75,10 @@ public class CommentService {
         }
     }
 
-    private Comment findComment(Long id) {
-        return commentRepository.findById(id).orElseThrow(() ->
+    private Comment findComment(Long boardId, Long postId, Long commentId) {
+        // 해당 게시글이 DB에 존재하는지 확인
+        PostService.findPost(boardId, postId);
+        return commentRepository.findByPostPostIdAndCommentId(postId, commentId).orElseThrow(() ->
                 new NullPointerException("존재하지 않는 댓글 입니다.")
         );
     }
