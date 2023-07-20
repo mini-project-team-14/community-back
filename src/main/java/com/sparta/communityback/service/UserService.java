@@ -54,7 +54,7 @@ public class UserService {
     private void checkUsername(String username) {
         Optional<User> checkUsername = userRepository.findByUsername(username);
         if (checkUsername.isPresent()) {
-            throw new IllegalArgumentException("중복된 사용자가 존재합니다.");
+            throw new IllegalArgumentException("username_exist");
         }
     }
 }
