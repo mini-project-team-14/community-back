@@ -1,5 +1,6 @@
 package com.sparta.communityback.jwt;
 
+import com.sparta.communityback.entity.RefreshToken;
 import com.sparta.communityback.entity.User;
 import com.sparta.communityback.entity.UserRoleEnum;
 import com.sparta.communityback.repository.UserRepository;
@@ -15,12 +16,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.net.URLDecoder;
 import java.security.Key;
 import java.util.Base64;
 import java.util.Date;
@@ -49,8 +51,8 @@ public class JwtUtil {
     private String secretKey;
     private Key key;
     private final SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
-    private final RedisService redisService;
     private final UserRepository userRepository;
+    private final RedisTemplate redisTemplate;
 
     // 로그 설정
     public static final Logger logger = LoggerFactory.getLogger("JWT 관련 로그");
@@ -76,16 +78,16 @@ public class JwtUtil {
     }
 
 
-    public String createRefreshToken(String username){
+    public String createRefreshToken(String username) {
         Date now = new Date();
 
         return BEARER_PREFIX +
-            Jwts.builder()
-                .setSubject(username) // 사용자 식별자값(ID)
-                .setExpiration(new Date(now.getTime() + REFRESH_TOKEN_TIME)) // 만료 시간
-                .setIssuedAt(now) // 발급일
-                .signWith(key, signatureAlgorithm) // 암호화 알고리즘
-                .compact();
+                Jwts.builder()
+                        .setSubject(username) // 사용자 식별자값(ID)
+                        .setExpiration(new Date(now.getTime() + REFRESH_TOKEN_TIME)) // 만료 시간
+                        .setIssuedAt(now) // 발급일
+                        .signWith(key, signatureAlgorithm) // 암호화 알고리즘
+                        .compact();
     }
 
     // JWT Cookie 에 저장
@@ -106,7 +108,7 @@ public class JwtUtil {
     }
 
     // header 에서 JWT 가져오기
-    public String getJwtFromHeader(HttpServletRequest request) {
+    public String getAccessTokenFromHeader(HttpServletRequest request) {
         String accessToken = request.getHeader(ACCESS_TOKEN);
         if (StringUtils.hasText(accessToken) && accessToken.startsWith(BEARER_PREFIX)) {
             return accessToken.substring(7);
@@ -115,53 +117,79 @@ public class JwtUtil {
     }
 
     // 토큰 검증
-    public boolean validateToken(String token, HttpServletRequest req, HttpServletResponse res) {
+    public Boolean validateAccessToken(String token) {
         try {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
             return true;
         } catch (SecurityException | MalformedJwtException | SignatureException e) {
-            log.error("Invalid JWT signature, 유효하지 않는 JWT 서명 입니다.");
-            throw new IllegalArgumentException("Invalid JWT signature, 유효하지 않는 JWT 서명 입니다.");
-        } catch (ExpiredJwtException | IllegalArgumentException e) {
-            if(req.getHeader(REFRESH_TOKEN).isEmpty()) {
-                log.error("Expired JWT token, 만료된 JWT token 입니다.");
-                throw new RuntimeException("Expired JWT token, 만료된 JWT token 입니다.");
-            } else {
-                String RefreshToken = req.getHeader(REFRESH_TOKEN);
-                String newAccessToken = regenerateAccessToken(RefreshToken);
-                res.addHeader(JwtUtil.ACCESS_TOKEN, newAccessToken);
-                res.addHeader(JwtUtil.REFRESH_TOKEN, RefreshToken);
-                log.info("토큰재발급 성공: {}", newAccessToken);
-            }
+            logger.error("Invalid JWT signature, 유효하지 않는 JWT 서명 입니다.");
+        } catch (ExpiredJwtException e) {
+            logger.error("Expired JWT token, 만료된 JWT token 입니다.");
         } catch (UnsupportedJwtException e) {
-            log.error("Unsupported JWT token, 지원되지 않는 JWT 토큰 입니다.");
-            throw new UnsupportedJwtException("Unsupported JWT token, 지원되지 않는 JWT 토큰 입니다.");
+            logger.error("Unsupported JWT token, 지원되지 않는 JWT 토큰 입니다.");
+        } catch (IllegalArgumentException e) {
+            logger.error("JWT claims is empty, 잘못된 JWT 토큰 입니다.");
         }
         return false;
     }
 
     public String regenerateAccessToken(String refreshToken) {
-        // redis에 토큰이 남아있는지 검증
-        String redisRefreshToken = findRefreshToken(refreshToken);
         // 토큰 재발급 과정
-        Optional<User> userOptional = userRepository.findById(Long.valueOf(redisRefreshToken));
-        String username = userOptional.get().getUsername();
+        String username = getUserInfoFromToken(refreshToken.substring(7)).getSubject();
+        Optional<User> userOptional = userRepository.findByUsername(username);
         String nickname = userOptional.get().getNickname();
         UserRoleEnum userRole = userOptional.get().getRole();
         return createAccessToken(username, nickname, userRole);
 
     }
+
     public String findRefreshToken(String refreshToken) {
-        String redisRefreshToken = redisService.getRefreshToken(refreshToken);
-        if(redisRefreshToken == null){
+        String redisRefreshToken = getAccessToken(refreshToken);
+        if (redisRefreshToken == null) {
             throw new RuntimeException("저장되지 않은 RefreshToken 입니다.");
         }
         return redisRefreshToken;
     }
 
+    public void validateRefreshToken(String refreshToken) {
+        String accessToken = getAccessToken(refreshToken);
+
+        if (accessToken == null) {
+            throw new RuntimeException("저장되지 않은 RefreshToken 입니다.");
+        }
+
+        String tokenValue = accessToken.substring(7);
+        if (!validateAccessToken(tokenValue)) {
+            return;
+        }
+
+        throw new IllegalArgumentException("이미 유효한 accessToken이 있습니다.");
+    }
+
+    public String validateTokens(HttpServletRequest req, HttpServletResponse res) {
+        // accessToken 검증 실패 RefreshToken 검증 시작
+        if (req.getHeader(REFRESH_TOKEN).isEmpty()) {
+            log.error("Refresh 토큰이 만료되었거나 Refresh 토큰이 존재하지 않습니다.");
+            throw new RuntimeException("Refresh 토큰이 만료되었거나 Refresh 토큰이 존재하지 않습니다.");
+        }
+        String refreshToken = req.getHeader(REFRESH_TOKEN);
+        validateRefreshToken(refreshToken);
+        String newAccessToken = regenerateAccessToken(refreshToken);
+        res.addHeader(JwtUtil.ACCESS_TOKEN, newAccessToken);
+        res.addHeader(JwtUtil.REFRESH_TOKEN, refreshToken);
+
+        log.info("토큰재발급 성공: {}", newAccessToken);
+        return newAccessToken;
+    }
+
     // 토큰에서 사용자 정보 가져오기
     public Claims getUserInfoFromToken(String token) {
         return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+    }
+
+    public String getAccessToken(String refreshToken) {
+        ValueOperations<String, String> values = redisTemplate.opsForValue();
+        return values.get(refreshToken);
     }
 
     // HttpServletRequest 에서 Cookie Value : JWT 가져오기

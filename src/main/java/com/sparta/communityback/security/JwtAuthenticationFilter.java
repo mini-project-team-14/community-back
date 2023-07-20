@@ -56,16 +56,17 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
         String accessToken = jwtUtil.createAccessToken(username, nickname, role);
         response.addHeader(JwtUtil.ACCESS_TOKEN, accessToken);
 
-        // redis userid값으로 조회후 동일한 값이 존재한다면 중복로그인은 불가능하다로 에러처리
-        String refreshToken = redisService.getRefreshToken(userId);
-        if (refreshToken != null) {
-            response.addHeader(JwtUtil.REFRESH_TOKEN, refreshToken);
-        } else {
-            String newRefreshToken = jwtUtil.createRefreshToken(username);
-            response.addHeader(JwtUtil.REFRESH_TOKEN, newRefreshToken);
-            // redis에 저장
-            redisService.setRefreshToken(new RefreshToken(newRefreshToken, userId));
+        // 중복 로그인 가능한 계정 수를 제한시키기
+        if (redisService.limitAccess(username)) {
+            log.info("접속수 제한 초과");
+            redisService.deleteOldRefreshToken(username);
         }
+        String newRefreshToken = jwtUtil.createRefreshToken(username);
+        response.addHeader(JwtUtil.REFRESH_TOKEN, newRefreshToken);
+        // redis에 저장
+        redisService.setRefreshToken(new RefreshToken(newRefreshToken, accessToken));
+
+
 
         response.setStatus(200);
         response.setContentType("application/json;charset=UTF-8");

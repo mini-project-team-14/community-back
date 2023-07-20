@@ -5,9 +5,12 @@ import com.sparta.communityback.dto.StatusResponseDto;
 import com.sparta.communityback.dto.UsernameRequestDto;
 import com.sparta.communityback.entity.User;
 import com.sparta.communityback.entity.UserRoleEnum;
+import com.sparta.communityback.jwt.JwtUtil;
 import com.sparta.communityback.repository.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -20,6 +23,8 @@ import java.util.Optional;
 public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RedisTemplate redisTemplate;
+    private final JwtUtil jwtUtil;
 
     @Value("${adimin.token}") // Base64 Encode 한 SecretKey
     private String ADMIN_TOKEN;
@@ -43,6 +48,12 @@ public class UserService {
         User user = new User(username, password, nickname, role);
         userRepository.save(user);
         return new StatusResponseDto(HttpStatus.OK.value(), "회원가입 성공!");
+    }
+
+    public StatusResponseDto logout(HttpServletRequest request) {
+        String refreshToken = request.getHeader(jwtUtil.REFRESH_TOKEN);
+        redisTemplate.delete(refreshToken);
+        return new StatusResponseDto(HttpStatus.OK.value(), "로그아웃 성공!");
     }
 
     public StatusResponseDto checkUsername(UsernameRequestDto requestDto) {

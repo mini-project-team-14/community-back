@@ -12,13 +12,17 @@ import org.springframework.data.redis.core.RedisHash;
 public class RefreshToken {
 
     @Id
-    private Long userid;
+    private String accessToken;
 
     @Column(unique = true)
     private String refreshToken;
 
-    public RefreshToken(String refreshToken, Long userId) {
-        this.userid = userId;
+//    @Column(unique = true)
+//    private String accessToken;
+
+    public RefreshToken(String refreshToken, String accessToken) {
+//        this.userid = userId;
         this.refreshToken = refreshToken;
+        this.accessToken = accessToken;
     }
 }
