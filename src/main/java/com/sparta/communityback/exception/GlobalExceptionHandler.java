@@ -29,9 +29,9 @@ public class GlobalExceptionHandler {
     public ResponseEntity<StatusResponseDto> handleException(MethodArgumentNotValidException ex) {
         StringBuilder sb = new StringBuilder();
         ex.getFieldErrors().forEach((e) -> {
-            sb.append(e.getDefaultMessage()).append(" / ");
+            sb.append(e.getDefaultMessage()).append(" ");
         });
-        sb.setLength(sb.length() - 3);
+        sb.setLength(sb.length() - 1);
         StatusResponseDto restApiException = new StatusResponseDto(
                 HttpStatus.BAD_REQUEST.value(),
                 sb.toString()
