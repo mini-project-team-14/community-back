@@ -3,14 +3,13 @@ package com.sparta.communityback.controller;
 import com.sparta.communityback.dto.SignupRequestDto;
 import com.sparta.communityback.dto.StatusResponseDto;
 import com.sparta.communityback.dto.UsernameRequestDto;
+import com.sparta.communityback.jwt.JwtUtil;
 import com.sparta.communityback.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 
 @RestController
@@ -31,4 +30,11 @@ public class UserController {
         return ResponseEntity.ok()
                 .body(userService.checkUsername(requestDto));
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<StatusResponseDto> logout(HttpServletRequest request) {
+        return ResponseEntity.ok()
+                .body(userService.logout(request));
+    }
+
 }
